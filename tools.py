@@ -1,7 +1,14 @@
+import math
 import os
+import random
 from matplotlib import pyplot as plt
+import numpy as np
 import torch
 import argparse
+import torch.nn as nn
+import torch.optim as optim
+from torch.autograd import Variable
+import torch.nn.utils as utils
 
 # Generates the dataset that is used for training the QBN for the feature vectors
 # Right now, the method resets the environment and adds the initial state into an array which is returned
@@ -67,3 +74,42 @@ def plot_data(dict, directory):
     plt.xlabel(x['x_label'])
     plt.savefig(os.path.join(directory, x['filename']))
     plt.clf()
+
+def trainQBN(qbn, train_data):
+  mse_loss = nn.MSELoss().cuda() if torch.cuda.is_available() else nn.MSELoss()
+  optimizer = optim.Adam(qbn.parameters(), lr=qbn.learning_rate, weight_decay=qbn.weight_decay)
+  quantised_vectors = []
+  total_train_batches = math.ceil(qbn.training_set_size / qbn.batch_size)
+  epoch_train_losses = []
+  
+  # QBN training loop
+  print("Beginning training of QBN")
+  for epoch in range(qbn.epochs):
+      qbn.train()
+      total_train_loss = 0
+      random.shuffle(train_data)
+      for b_i in range(total_train_batches):
+          batch_input = train_data[(b_i * qbn.batch_size) : (b_i * qbn.batch_size) + qbn.batch_size]
+          batch_input = torch.FloatTensor(np.array(batch_input))
+          batch_target = Variable(batch_input)
+          batch_input = Variable(batch_input, requires_grad=True)
+
+          if (torch.cuda.is_available()):
+              batch_input, batch_target = batch_input.cuda(), batch_target.cuda()
+
+          quantised_vector, feature_reconstruction = qbn.forward(batch_input)
+          quantised_vectors.append(quantised_vector)
+
+          optimizer.zero_grad()
+          loss = mse_loss(feature_reconstruction, batch_target)
+          total_train_loss += loss.item()
+          loss.backward()
+          utils.clip_grad_norm_(qbn.parameters(), 5)
+          optimizer.step()
+
+      average_loss = round(total_train_loss / total_train_batches, 5)
+      epoch_train_losses.append(average_loss)
+
+      print('Epoch: {}, Training loss: {}'.format(epoch, average_loss))
+
+  return qbn
