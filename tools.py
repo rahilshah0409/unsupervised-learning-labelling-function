@@ -1,4 +1,5 @@
 import os
+from matplotlib import pyplot as plt
 import torch
 import argparse
 
@@ -45,3 +46,24 @@ def get_args():
     args.cuda = (not args.no_cuda) and torch.cuda.is_available()
 
     return args
+
+def plot_data(dict, directory):
+  for x in dict:
+    title = x['title']
+    train_data = x['train_data']
+    if len(train_data) == 1:
+        plt.scatter([0], train_data)
+    else:
+        plt.plot(train_data, color='r', label='train')
+    test_data = x['test_data']
+    if len(test_data) == 1:
+        plt.scatter([0], test_data)
+    else:
+        plt.plot(test_data, color='g', label='test')
+    plt.grid(True)
+    plt.title(title)
+    plt.legend()
+    plt.ylabel(x['y_label'])
+    plt.xlabel(x['x_label'])
+    plt.savefig(os.path.join(directory, x['filename']))
+    plt.clf()
