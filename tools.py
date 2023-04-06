@@ -10,19 +10,42 @@ import torch.optim as optim
 from torch.autograd import Variable
 import torch.nn.utils as utils
 
-# Generates the dataset that is used for training the QBN for the feature vectors
-# Right now, the method resets the environment and adds the initial state into an array which is returned
-def generate_training_data(env, size_of_dataset):
-  # This method generates data that can be used to train the QBN for the observation features
+# Generates the dataset that is used for training the QBN for the feature vectors by randomly initialising the environment a given number of times
+def generate_train_data_rand_init(env, dataset_size):
   obs_training_data = []
-  for _ in range(size_of_dataset):
+  for _ in range(dataset_size):
     rand_initial_state = env.reset()
     obs_training_data.append(rand_initial_state)
   return obs_training_data
 
-def generate_testing_data(env, size_of_dataset):
+def generate_testing_data(env, dataset_size):
   # This method generates data that can be used for testing the QBN for the observation features
-  return generate_training_data(env, size_of_dataset)
+  return generate_train_data_rand_init(env, dataset_size)
+
+def generate_train_data_succ_traces(env, dataset_size):
+  dataset = []
+
+  while len(dataset) < dataset_size:
+    initial_state = env.reset()
+    state = torch.tensor(initial_state).float()
+    dataset.append(state)
+
+    done, terminated, t = False, False, 1
+
+    while not (done or terminated):
+        NUM_ACTIONS = 5
+        action_probs = np.full(NUM_ACTIONS, 1 / NUM_ACTIONS)
+        action = random.choices(range(NUM_ACTIONS), weights=action_probs, k=1)[0]
+
+        next_state, _, done, observations = env.step(action)
+
+        next_state = torch.tensor(next_state).reshape(-1).float()
+        state = next_state
+        dataset.append(state)
+        
+        t += 1
+
+  return dataset
 
 def get_args():
     """

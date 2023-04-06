@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
     # Generate dataset for training
     print("Beginning to generate training data")
-    obs_training_data = tl.generate_training_data(env=env, size_of_dataset=training_set_size)
+    obs_training_data = tl.generate_train_data_rand_init(env=env, dataset_size=training_set_size)
     print("Finished generating training data")
 
     # Train QBN
