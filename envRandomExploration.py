@@ -76,42 +76,42 @@ if __name__ == '__main__':
     print("Episode durations")
     print(episode_durations)
 
-    # # Get the shortest traces- they are the most relevant
-    # relevant_state_seqs, relevant_events = extractShortestSuccessfulTraces(episode_durations, states_traversed, episode_events, NUM_SUCC_TRACES)
+    # Get the shortest traces- they are the most relevant
+    relevant_state_seqs, relevant_events = extractShortestSuccessfulTraces(episode_durations, states_traversed, episode_events, NUM_SUCC_TRACES)
 
-    # input_vec_dim = 52
+    input_vec_dim = 52
 
-    # # Hyperparameters
-    # quant_vector_dim = 80
-    # training_batch_size = 32
-    # test_batch_size = 32
-    # learning_rate = 1e-4
-    # weight_decay = 0
-    # epochs = 400
-    # training_set_size = 8192
-    # testing_set_size = 2048
+    # Hyperparameters
+    quant_vector_dim = 80
+    training_batch_size = 32
+    test_batch_size = 32
+    learning_rate = 1e-4
+    weight_decay = 0
+    epochs = 400
+    training_set_size = 8192
+    testing_set_size = 2048
 
-    # # Generate QBN
-    # qbn = QuantisedBottleneckNetwork(input_vec_dim, quant_vector_dim, training_batch_size, learning_rate, weight_decay, epochs, training_set_size)
+    # Generate QBN
+    qbn = QuantisedBottleneckNetwork(input_vec_dim, quant_vector_dim, training_batch_size, learning_rate, weight_decay, epochs, training_set_size)
 
-    # # Generate dataset for training
-    # print("Beginning to generate training data")
-    # obs_training_data = tl.generate_training_data(env=env, size_of_dataset=training_set_size)
-    # print("Finished generating training data")
+    # Generate dataset for training
+    print("Beginning to generate training data")
+    obs_training_data = tl.generate_training_data(env=env, size_of_dataset=training_set_size)
+    print("Finished generating training data")
 
-    # # Train QBN
-    # qbn = tl.trainQBN(qbn, obs_training_data)
-    # print("Finished training the QBN")
+    # Train QBN
+    qbn = tl.trainQBN(qbn, obs_training_data)
+    print("Finished training the QBN")
 
-    # # Encoded every state in every sequence with the QBN
-    # encoded_seqs = []
-    # for state_seq in relevant_state_seqs:
-    #     encoded_state_seq = []
-    #     for state in state_seq:
-    #         encoded_state = qbn.encode(state)
-    #         encoded_state_seq.append(encoded_state)
+    # Encoded every state in every sequence with the QBN
+    encoded_seqs = []
+    for state_seq in relevant_state_seqs:
+        encoded_state_seq = []
+        for state in state_seq:
+            encoded_state = qbn.encode(state)
+            encoded_state_seq.append(encoded_state)
         
-    #     encoded_seqs.append(encoded_state_seq)
+        encoded_seqs.append(encoded_state_seq)
 
     # TODO: Extract labels from latent vectors that are common amongst the different 
 
