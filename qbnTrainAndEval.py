@@ -128,16 +128,17 @@ if __name__ == '__main__':
     # args = tl.get_args() Not using this yet, will do once hyperparameters have been tuned
     # env = gym.make("gym_subgoal_automata:{}".format(args.env), params={"generation": "random", "environment_seed": args.env_seed})
     env = gym.make("gym_subgoal_automata:WaterWorldRedGreen-v0", params={"generation": "random", "environment_seed": 0})
+    trained_model_loc = "./trainedQBN/finalModel.pth"
 
     input_vec_dim = 52
 
     # Hyperparameters
-    quant_vector_dim = 80
+    quant_vector_dim = 100
     training_batch_size = 32
     test_batch_size = 32
     learning_rate = 1e-4
     weight_decay = 0
-    epochs = 400
+    epochs = 300
     training_set_size = 8192
     testing_set_size = 2048
 
@@ -156,6 +157,8 @@ if __name__ == '__main__':
     print("Training the QBN now")
     qbn = trainingLoop(qbn, obs_training_data, obs_testing_data, test_batch_size)
     print("Finished training the QBN")
+
+    torch.save(qbn.state_dict(), trained_model_loc)
 
     average_loss = evaluateQBN(qbn, obs_testing_data, test_batch_size)
     print("Average Loss: {}".format(average_loss))

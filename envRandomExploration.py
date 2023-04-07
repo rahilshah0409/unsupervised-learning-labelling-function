@@ -67,6 +67,7 @@ def runAgentWithPolicy(env, num_episodes):
 
 if __name__ == '__main__':
     env = gym.make("gym_subgoal_automata:WaterWorldRedGreen-v0", params={"generation": "random", "environment_seed": 0})
+    trained_model_loc = "./trainedQBN/finalModel.pth"
 
     NUM_SUCC_TRACES = 1
     NUM_EPISODES = 10
@@ -79,29 +80,8 @@ if __name__ == '__main__':
     # Get the shortest traces- they are the most relevant
     relevant_state_seqs, relevant_events = extractShortestSuccessfulTraces(episode_durations, states_traversed, episode_events, NUM_SUCC_TRACES)
 
-    input_vec_dim = 52
-
-    # Hyperparameters
-    quant_vector_dim = 80
-    training_batch_size = 32
-    test_batch_size = 32
-    learning_rate = 1e-4
-    weight_decay = 0
-    epochs = 400
-    training_set_size = 8192
-    testing_set_size = 2048
-
-    # Generate QBN
-    qbn = QuantisedBottleneckNetwork(input_vec_dim, quant_vector_dim, training_batch_size, learning_rate, weight_decay, epochs, training_set_size)
-
-    # Generate dataset for training
-    print("Beginning to generate training data")
-    obs_training_data = tl.generate_train_data_rand_init(env=env, dataset_size=training_set_size)
-    print("Finished generating training data")
-
-    # Train QBN
-    qbn = tl.trainQBN(qbn, obs_training_data)
-    print("Finished training the QBN")
+    # Load the QBN (trained through the program qbnTrainAndEval.py)
+    qbn = torch.load(trained_model_loc)
 
     # Encoded every state in every sequence with the QBN
     encoded_seqs = []
@@ -113,7 +93,7 @@ if __name__ == '__main__':
         
         encoded_seqs.append(encoded_state_seq)
 
-    # TODO: Extract labels from latent vectors that are common amongst the different 
+    # TODO: Extract labels from latent vectors that are common amongst the different- 
 
     # TODO: Compare extracted labels to events that have been stored
 

@@ -18,10 +18,12 @@ def generate_train_data_rand_init(env, dataset_size):
     obs_training_data.append(rand_initial_state)
   return obs_training_data
 
+# Generate the dataset used to evaluate the QBN
 def generate_testing_data(env, dataset_size):
   # This method generates data that can be used for testing the QBN for the observation features
   return generate_train_data_rand_init(env, dataset_size)
 
+# Generates the dataset used for QBN training by adding the states of successful traces when an agent follows a random policy
 def generate_train_data_succ_traces(env, dataset_size):
   dataset = []
 
@@ -47,6 +49,7 @@ def generate_train_data_succ_traces(env, dataset_size):
 
   return dataset
 
+# Gets the cmdline arguments
 def get_args():
     """
     Arguments used to get input from command line.
@@ -77,6 +80,7 @@ def get_args():
 
     return args
 
+# Plots the information passed in as dict and saves the plot in directory
 def plot_data(dict, directory):
   for x in dict:
     title = x['title']
@@ -98,6 +102,7 @@ def plot_data(dict, directory):
     plt.savefig(os.path.join(directory, x['filename']))
     plt.clf()
 
+# Trains a given QBN with train_data
 def trainQBN(qbn, train_data):
   mse_loss = nn.MSELoss().cuda() if torch.cuda.is_available() else nn.MSELoss()
   optimizer = optim.Adam(qbn.parameters(), lr=qbn.learning_rate, weight_decay=qbn.weight_decay)
