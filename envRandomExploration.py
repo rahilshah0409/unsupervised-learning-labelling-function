@@ -1,8 +1,14 @@
+import math
 import random
+from matplotlib import pyplot as plt
+import pandas as pd
+from sklearn.cluster import KMeans
 import torch
 import gym
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.decomposition import PCA
+import seaborn as sns
 
 from qbn import QuantisedBottleneckNetwork
 
@@ -64,7 +70,7 @@ def encodeStateSeqs(qbn, state_seqs):
         encoded_state_seq = []
         for state in state_seq:
             encoded_state = qbn.encode(state)
-            encoded_state_seq.append(encoded_state)        
+            encoded_state_seq.append(encoded_state.detach().numpy())        
         encoded_seqs.append(encoded_state_seq)
     return encoded_seqs
 
@@ -98,12 +104,42 @@ def extractSimilarStates(state_seqs, sim_threshold):
             if (state_seq_i != state_seq_j):
                 for x in range(len(state_seq_i)):
                     for y in range(len(state_seq_j)):
-                        state_x = np.array([state_seq_i[x].detach().numpy()])
-                        state_y = np.array([state_seq_j[y].detach().numpy()])
+                        state_x = np.array([state_seq_i[x]])
+                        state_y = np.array([state_seq_j[y]])
                         cos_sim = cosine_similarity(state_x, state_y)
                         if (cos_sim >= sim_threshold):
                             similar_states_indices.append(((i, x), (j, y)))
     return similar_states_indices
+
+# Uses principal component analysis to reduce the dimensionality of the data into two dimensions. This will help for visualisation of the KMeans clustering
+def datasetDimReduction(state_seqs):
+    # print(state_seqs)
+    flattened_states = np.concatenate(state_seqs)
+    pca2 = PCA(n_components=2)
+    print(flattened_states)
+    principal_components = pca2.fit_transform(flattened_states)
+    return principal_components
+
+# Plots the KMeans clusters
+def plotKMeansClustering(df, labels, no_of_clusters):
+    print("Labels (corresponding to different clusters)")
+    print(labels)
+    # print(df)
+    for i in range(no_of_clusters):
+        filtered_df = df[labels == i]
+        print("Filtered dataframe for label {}".format(i))
+        print(filtered_df)
+        plt.scatter(filtered_df['Principal component 1'], filtered_df['Principal component 2'], label = i)
+    plt.legend()
+    plt.show()
+
+# Performs KMeans clustering on the state sequences and plots the resulting data
+def kmeansClustering(state_seqs, no_of_clusters):
+    principal_components = datasetDimReduction(state_seqs)
+    pca_df = pd.DataFrame(data=principal_components, columns=['Principal component 1', 'Principal component 2'])
+    kmeans = KMeans(n_clusters=no_of_clusters)
+    labels = kmeans.fit_predict(pca_df)
+    plotKMeansClustering(pca_df, labels, no_of_clusters)
 
 if __name__ == '__main__':
     env = gym.make("gym_subgoal_automata:WaterWorldRedGreen-v0", params={"generation": "random", "environment_seed": 0})
@@ -137,23 +173,29 @@ if __name__ == '__main__':
     print("Using QBN to encode states")
     encoded_seqs = encodeStateSeqs(qbn, relevant_state_seqs)
 
-    # TODO: Extract labels from latent vectors that are common amongst the different
-    print("Applying cosine similarity to each pair")
-    sim_threshold = 0.82
-    sim_states_indices = extractSimilarStates(encoded_seqs, sim_threshold)
+    # Extract labels from latent vectors through pairwise comparison with cosine similarity
+    # print("Applying cosine similarity to each pair")
+    # sim_threshold = 0.82
+    # sim_states_indices = extractSimilarStates(encoded_seqs, sim_threshold)
+    # TODO: Extract labels from similar states
     # print("Indices of similar states. Similarity score threshold: {}".format(sim_threshold))
     # print(sim_states_indices)
     # print(len(sim_states_indices))
 
-    # TODO: Compare extracted labels to events that have been stored
-    for ((i, x), (j, y)) in sim_states_indices:
-        # print("({}, {}), ({}, {})".format(i, x, j, y))
-        events_observed_1 = relevant_events[i][x]
-        events_observed_2 = relevant_events[j][y]
-        if (events_observed_1 != set() and events_observed_2 != set()):
-            print("({}, {}), ({}, {})".format(i, x, j, y))
-            print("Events observed 1")
-            print(events_observed_1)
-            print("Events observed 2")
-            print(events_observed_2)
+    # Alternatively, extract labels from latent vectors with k-means clustering
+    print("Clustering the state sequences with KMeans and PCA")
+    no_of_events = 2
+    kmeansClustering(encoded_seqs, 2 ** no_of_events)
+
+    # TODO: Perform evaluation of extracted labels 
+    # for ((i, x), (j, y)) in sim_states_indices:
+    #     # print("({}, {}), ({}, {})".format(i, x, j, y))
+    #     events_observed_1 = relevant_events[i][x]
+    #     events_observed_2 = relevant_events[j][y]
+    #     if (events_observed_1 != set() and events_observed_2 != set()):
+    #         print("({}, {}), ({}, {})".format(i, x, j, y))
+    #         print("Events observed 1")
+    #         print(events_observed_1)
+    #         print("Events observed 2")
+    #         print(events_observed_2)
 
