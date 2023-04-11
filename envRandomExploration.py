@@ -160,6 +160,7 @@ def extract_sim_states(state_seqs, sim_threshold):
                             similar_states_indices[i][x].append((j, y, cos_sim))
     return similar_states_indices
 
+# Extracts event labels by comparing state vectors across different successful traces
 def extract_events_from_pairwise_comp(state_seqs):
     sim_threshold = 0.82
     sim_states_indices = extract_sim_states(state_seqs, sim_threshold)
@@ -175,6 +176,7 @@ def extract_events_from_pairwise_comp(state_seqs):
     event_labels = [set() for _ in range(len(np.concatenate(state_seqs)))]
     return event_labels
 
+# Extracts event labels of the given state sequences, either by pairwise comparison or clustering
 def extract_events(state_seqs, pairwise_comp):
     return extract_events_from_pairwise_comp(state_seqs) if pairwise_comp else extract_events_from_clustering(state_seqs)
 
@@ -220,8 +222,6 @@ if __name__ == '__main__':
     correct_labels = [l1 for l1, l2 in zip(event_labels, conc_relevant_events) if l1 == l2]
     accuracy = len(correct_labels) / len(conc_relevant_events)
     print("Accuracy of predicted mapping of event labels is {}".format(accuracy))
-
-    # print(event_sets)
 
     # for ((i, x), (j, y)) in sim_states_indices:
     #     # print("({}, {}), ({}, {})".format(i, x, j, y))
