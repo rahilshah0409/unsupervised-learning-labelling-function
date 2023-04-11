@@ -74,24 +74,6 @@ def encodeStateSeqs(qbn, state_seqs):
         encoded_seqs.append(encoded_state_seq)
     return encoded_seqs
 
-# Calculates the cosine similarity score between two vectors and records the indices of states that are similar enough (where enough is determined by a threshold score provided as input)
-def extractSimilarStates(state_seqs, sim_threshold):
-    similar_states_indices = [[[] for _ in range(len(state_seqs[x]))] for x in range(len(state_seqs))]
-    for i in range(len(state_seqs)):
-        for j in range(len(state_seqs)):
-            state_seq_i = state_seqs[i]
-            state_seq_j = state_seqs[j]
-            print(len(state_seq_i))
-            print(len(state_seq_j))
-            if (state_seq_i != state_seq_j):
-                cos_sims = cosine_similarity(state_seq_i, state_seq_j)
-                for x in range(len(state_seq_i)):
-                    for y in range(len(state_seq_j)):
-                        cos_sim = cos_sims[x][y]
-                        if (cos_sim >= sim_threshold):
-                            similar_states_indices[i][x].append((j, y, cos_sim))
-    return similar_states_indices
-
 # Uses principal component analysis to reduce the dimensionality of the data into two dimensions. This will help for visualisation of the KMeans clustering
 def datasetDimReduction(states):
     pca2 = PCA(n_components=2)
@@ -116,8 +98,7 @@ def kmeansClustering(state_seqs, no_of_clusters):
     return labels
 
 # Given the cluster that each event is assigned to, extract an event label from them
-# Currently takes a naive approach
-# TODO: Change this approach
+# TODO: Change this approach (currently naive)
 def extract_labels_from_clusters(cluster_labels):
     event_labels = []
     hardcoded_mapping = {'0': set(), '1': {'r'}, '2': {'b'}, '3': {'b', 'r'}}
@@ -128,11 +109,48 @@ def extract_labels_from_clusters(cluster_labels):
 
 def extract_events_from_clustering(state_seqs):
     print("Clustering the state sequences with KMeans and PCA")
+    conc_state_seqs = np.concatenate(state_seqs)
     no_of_events = 2
-    cluster_labels = kmeansClustering(state_seqs, 2 ** no_of_events)
-    print(cluster_labels)
+    cluster_labels = kmeansClustering(conc_state_seqs, 2 ** no_of_events)
+    print("Extracting labels from the clusters")
     event_labels = extract_labels_from_clusters(cluster_labels)
     return event_labels
+
+# Calculates the cosine similarity score between two vectors and records the indices of states that are similar enough (where enough is determined by a threshold score provided as input)
+def extractSimilarStates(state_seqs, sim_threshold):
+    similar_states_indices = [[[] for _ in range(len(state_seqs[x]))] for x in range(len(state_seqs))]
+    for i in range(len(state_seqs)):
+        for j in range(len(state_seqs)):
+            state_seq_i = state_seqs[i]
+            state_seq_j = state_seqs[j]
+            print(len(state_seq_i))
+            print(len(state_seq_j))
+            if (state_seq_i != state_seq_j):
+                cos_sims = cosine_similarity(state_seq_i, state_seq_j)
+                for x in range(len(state_seq_i)):
+                    for y in range(len(state_seq_j)):
+                        cos_sim = cos_sims[x][y]
+                        if (cos_sim >= sim_threshold):
+                            similar_states_indices[i][x].append((j, y, cos_sim))
+    return similar_states_indices
+
+def extract_events_from_pairwise_comp(state_seqs):
+    sim_threshold = 0.82
+    sim_states_indices = extractSimilarStates(state_seqs, sim_threshold)
+    print("Indices of similar states. Similarity score threshold: {}".format(sim_threshold))
+    for i in range(NUM_SUCC_TRACES):
+        for j in range(len(sim_states_indices[i])):
+            print("Vectors similar to the {}th state in the {}th trace:".format(j, i))
+            print(sim_states_indices[i][j])
+            print("-------------")
+        print("----------------------------------------------")
+    print(len(sim_states_indices))
+    # TODO: Change approach of extracting labels from similar states (this is naive)
+    event_labels = [set() for _ in range(len(np.concatenate(state_seqs)))]
+    return event_labels
+
+def extract_events(state_seqs, pairwise_comp):
+    return extract_events_from_pairwise_comp(state_seqs) if pairwise_comp else extract_events_from_clustering(state_seqs)
 
 if __name__ == '__main__':
     env = gym.make("gym_subgoal_automata:WaterWorldRedGreen-v0", params={"generation": "random", "environment_seed": 0})
@@ -168,28 +186,15 @@ if __name__ == '__main__':
     # Transforming each state from a tensor object to np.ndarray
     relevant_state_seqs = list(map(lambda seq: list(map(lambda state: state.detach().numpy(), seq)), relevant_state_seqs))
 
-    # Extract labels from latent vectors through pairwise comparison with cosine similarity
-    # print("Applying cosine similarity to each pair")
-    # sim_threshold = 0.82
-    # sim_states_indices = extractSimilarStates(encoded_seqs, sim_threshold)
-    # # TODO: Extract labels from similar states
-    # print("Indices of similar states. Similarity score threshold: {}".format(sim_threshold))
-    # for i in range(NUM_SUCC_TRACES):
-    #     for j in range(len(sim_states_indices[i])):
-    #         print("Vectors similar to the {}th state in the {}th trace:".format(j, i))
-    #         print(sim_states_indices[i][j])
-    #         print("-------------")
-    #     print("----------------------------------------------")
-    # print(len(sim_states_indices))
-
     # Alternatively, extract labels from latent vectors with k-means clustering
-    event_labels = extract_events_from_clustering(np.concatenate(relevant_state_seqs))
+    event_labels = extract_events(state_seqs=encoded_seqs, pairwise_comp=False)
 
-    # TODO: Perform evaluation of extracted labels 
+    # Perform evaluation of extracted labels 
     conc_relevant_events = np.concatenate(relevant_events)
     correct_labels = [l1 for l1, l2 in zip(event_labels, conc_relevant_events) if l1 == l2]
     accuracy = len(correct_labels) / len(conc_relevant_events)
     print("Accuracy of predicted mapping of event labels is {}".format(accuracy))
+
     # event_sets = [{} for _ in range(2 ** no_of_events)]
     # i = 0
     # j = 0
