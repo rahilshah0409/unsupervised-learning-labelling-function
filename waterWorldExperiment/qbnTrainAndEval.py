@@ -138,7 +138,7 @@ if __name__ == '__main__':
     print("Finished training the QBN")
 
     # Save the trained model
-    torch.save(qbn.state_dict(), trained_model_loc)
+    # torch.save(qbn.state_dict(), trained_model_loc)
 
     # Evaluate the model's performance
     average_loss = eval_qbn(qbn, obs_testing_data, test_batch_size)
