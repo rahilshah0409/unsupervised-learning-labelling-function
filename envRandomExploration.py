@@ -19,7 +19,7 @@ def choose_action():
     return action
 
 # Runs an agent in the given environment for a given number of episodes, keeping track of the states traversed and events observed at every time step
-def runAgentWithPolicy(env, num_episodes):
+def run_agent(env, num_episodes):
     episode_durations = []
     states_traversed = []
     events_per_episode = []
@@ -51,7 +51,7 @@ def runAgentWithPolicy(env, num_episodes):
     return episode_durations, states_traversed, events_per_episode
 
 # Extracts the n shortest successful traces, where n is no_of_traces_to_extract
-def extractShortestSuccessfulTraces(trace_lengths, states, events, no_of_traces_to_extract):
+def extract_shortest_succ_traces(trace_lengths, states, events, no_of_traces_to_extract):
     sorted_trace_lengths = sorted(trace_lengths)
     extracted_state_seqs = []
     extracted_events = []
@@ -64,7 +64,7 @@ def extractShortestSuccessfulTraces(trace_lengths, states, events, no_of_traces_
     return extracted_ep_durations, extracted_state_seqs, extracted_events
 
 # Given a list of state sequences, encodes every state in every sequence with the QBN given
-def encodeStateSeqs(qbn, state_seqs):
+def encode_state_seqs(qbn, state_seqs):
     encoded_seqs = []
     for state_seq in state_seqs:
         encoded_state_seq = []
@@ -75,13 +75,13 @@ def encodeStateSeqs(qbn, state_seqs):
     return encoded_seqs
 
 # Uses principal component analysis to reduce the dimensionality of the data into two dimensions. This will help for visualisation of the KMeans clustering
-def datasetDimReduction(states):
+def dataset_dim_reduction(states):
     pca2 = PCA(n_components=2)
     principal_components = pca2.fit_transform(states)
     return principal_components
 
 # Plots the KMeans clusters
-def plotKMeansClustering(df, labels, no_of_clusters):
+def plot_kmeans_clustering(df, labels, no_of_clusters):
     for i in range(no_of_clusters):
         filtered_df = df[labels == i]
         plt.scatter(filtered_df['Principal component 1'], filtered_df['Principal component 2'], label = i)
@@ -89,8 +89,8 @@ def plotKMeansClustering(df, labels, no_of_clusters):
     plt.show()
 
 # Performs KMeans clustering on the state sequences and plots the resulting data
-def kmeansClustering(state_seqs, no_of_clusters):
-    principal_components = datasetDimReduction(state_seqs)
+def kmeans_clustering(state_seqs, no_of_clusters):
+    principal_components = dataset_dim_reduction(state_seqs)
     pca_df = pd.DataFrame(data=principal_components, columns=['Principal component 1', 'Principal component 2'])
     kmeans = KMeans(n_clusters=no_of_clusters)
     labels = kmeans.fit_predict(pca_df)
@@ -107,17 +107,43 @@ def extract_labels_from_clusters(cluster_labels):
         event_labels.append(hardcoded_mapping[cluster_label_str])
     return event_labels
 
+def plot_cluster_labels_over_traces(state_seqs, cluster_labels):
+    succ_trace_index = 0
+    state_index_in_trace = 0
+    cluster_label_index = 0
+    fig, axs = plt.subplots(NUM_SUCC_TRACES)
+    fig.suptitle("Cluster labels for different traces")
+
+    y_axis = []
+    while succ_trace_index < NUM_SUCC_TRACES:
+        label = cluster_labels[cluster_label_index]
+        y_axis.append(label)
+        state_index_in_trace += 1
+        cluster_label_index += 1
+        if state_index_in_trace >= len(state_seqs[succ_trace_index]):
+            x_axis = range(state_index_in_trace)
+            axs[succ_trace_index].plot(x_axis, y_axis)
+            axs[succ_trace_index].set_title("Trace {}".format(succ_trace_index))
+            axs[succ_trace_index].set(xlabel="State index", ylabel="Cluster labels")
+            succ_trace_index += 1
+            state_index_in_trace = 0
+            y_axis = []
+
+    plt.show()
+
 def extract_events_from_clustering(state_seqs):
     print("Clustering the state sequences with KMeans and PCA")
     conc_state_seqs = np.concatenate(state_seqs)
     no_of_events = 2
-    cluster_labels = kmeansClustering(conc_state_seqs, 2 ** no_of_events)
+    cluster_labels = kmeans_clustering(conc_state_seqs, 2 ** no_of_events)
+    print(cluster_labels)
+    plot_cluster_labels_over_traces(state_seqs, cluster_labels)
     print("Extracting labels from the clusters")
     event_labels = extract_labels_from_clusters(cluster_labels)
     return event_labels
 
 # Calculates the cosine similarity score between two vectors and records the indices of states that are similar enough (where enough is determined by a threshold score provided as input)
-def extractSimilarStates(state_seqs, sim_threshold):
+def extract_sim_states(state_seqs, sim_threshold):
     similar_states_indices = [[[] for _ in range(len(state_seqs[x]))] for x in range(len(state_seqs))]
     for i in range(len(state_seqs)):
         for j in range(len(state_seqs)):
@@ -136,7 +162,7 @@ def extractSimilarStates(state_seqs, sim_threshold):
 
 def extract_events_from_pairwise_comp(state_seqs):
     sim_threshold = 0.82
-    sim_states_indices = extractSimilarStates(state_seqs, sim_threshold)
+    sim_states_indices = extract_sim_states(state_seqs, sim_threshold)
     print("Indices of similar states. Similarity score threshold: {}".format(sim_threshold))
     for i in range(NUM_SUCC_TRACES):
         for j in range(len(sim_states_indices[i])):
@@ -160,10 +186,10 @@ if __name__ == '__main__':
     NUM_EPISODES = 10
 
     # Generate successful traces for the task
-    episode_durations, states_traversed, episode_events = runAgentWithPolicy(env, NUM_EPISODES)
+    episode_durations, states_traversed, episode_events = run_agent(env, NUM_EPISODES)
 
     # Get the shortest traces- they are the most relevant
-    shortest_ep_durations, relevant_state_seqs, relevant_events = extractShortestSuccessfulTraces(episode_durations, states_traversed, episode_events, NUM_SUCC_TRACES)
+    shortest_ep_durations, relevant_state_seqs, relevant_events = extract_shortest_succ_traces(episode_durations, states_traversed, episode_events, NUM_SUCC_TRACES)
 
     # Load the QBN (trained through the program qbnTrainAndEval.py)
     input_vec_dim = 52
@@ -181,7 +207,7 @@ if __name__ == '__main__':
 
     # Encoded every state (tensor object) in every sequence with the QBN
     print("Using QBN to encode states")
-    encoded_seqs = encodeStateSeqs(qbn, relevant_state_seqs)
+    encoded_seqs = encode_state_seqs(qbn, relevant_state_seqs)
 
     # Transforming each state from a tensor object to np.ndarray
     relevant_state_seqs = list(map(lambda seq: list(map(lambda state: state.detach().numpy(), seq)), relevant_state_seqs))
@@ -194,20 +220,6 @@ if __name__ == '__main__':
     correct_labels = [l1 for l1, l2 in zip(event_labels, conc_relevant_events) if l1 == l2]
     accuracy = len(correct_labels) / len(conc_relevant_events)
     print("Accuracy of predicted mapping of event labels is {}".format(accuracy))
-
-    # event_sets = [{} for _ in range(2 ** no_of_events)]
-    # i = 0
-    # j = 0
-    # k = 0
-    # while i < NUM_SUCC_TRACES:
-    #     label = cluster_labels[k]
-    #     event = relevant_events[i][j]
-    #     event_sets[label].add(event)
-    #     j += 1
-    #     k += 1
-    #     if j >= shortest_ep_durations[i]:
-    #         i += 1
-    #         j = 0
 
     # print(event_sets)
 

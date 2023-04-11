@@ -1,9 +1,6 @@
 # Python program that allows for experimentation with the Water World environment
 
 import math
-import sys
-import time
-
 from sklearn.model_selection import RandomizedSearchCV
 from qbn import QuantisedBottleneckNetwork
 import gym
@@ -32,7 +29,7 @@ def QBNHyperParameterSearch(model, x, y):
   return search.best_params_, search.best_estimator_
 
 # Method that carries out the training loop, hyperparameters chosen are in the model object itself
-def trainingLoop(model, train_data, test_data, test_batch_size):
+def train_loop(model, train_data, test_data, test_batch_size):
     mse_loss = nn.MSELoss().cuda() if torch.cuda.is_available() else nn.MSELoss()
     optimizer = optim.Adam(qbn.parameters(), lr=model.learning_rate, weight_decay=model.weight_decay)
     quantised_vectors = []
@@ -72,7 +69,7 @@ def trainingLoop(model, train_data, test_data, test_batch_size):
         average_loss = round(total_train_loss / total_train_batches, 5)
         epoch_train_losses.append(average_loss)
 
-        average_test_loss = round(evaluateQBN(model, test_data, test_batch_size), 5)
+        average_test_loss = round(eval_qbn(model, test_data, test_batch_size), 5)
         epoch_test_losses.append(average_test_loss)
 
         print('Epoch: {}, Training loss: {}, Test loss: {}'.format(epoch, average_loss, average_test_loss))
@@ -91,7 +88,7 @@ def trainingLoop(model, train_data, test_data, test_batch_size):
     return model
 
 # Evaluates the model (given as argument) after it has been trained
-def evaluateQBN(model, test_data, batch_size):
+def eval_qbn(model, test_data, batch_size):
     total_test_batches = math.ceil(len(test_data) / batch_size)
     loss_total = 0
     with torch.no_grad():
@@ -109,27 +106,13 @@ def evaluateQBN(model, test_data, batch_size):
         loss = mse_loss(reconstruction, batch_target)
         loss_total += loss.item()
 
-        # print("Input:")
-        # print(batch_input)
-        # print("Encoding:")
-        # print(encoding)
-        # print("Decoding:")
-        # print(reconstruction)
-        # print("Loss: %f", loss)
-
     return loss_total / total_test_batches
-
-# Helper method that prints out datapoints in the dataset given as input
-def inspectData(data):
-  for i in range(100):
-    print(data[i])
 
 if __name__ == '__main__':
     # args = tl.get_args() Not using this yet, will do once hyperparameters have been tuned
     # env = gym.make("gym_subgoal_automata:{}".format(args.env), params={"generation": "random", "environment_seed": args.env_seed})
     env = gym.make("gym_subgoal_automata:WaterWorldRedGreen-v0", params={"generation": "random", "environment_seed": 0})
     trained_model_loc = "./trainedQBN/finalModel.pth"
-
     input_vec_dim = 52
 
     # Hyperparameters
@@ -144,21 +127,19 @@ if __name__ == '__main__':
 
     # Generate training dataset
     print("Beginning to generate training and testing data")
-
     obs_training_data = tl.generate_train_data_rand_init(env=env, dataset_size=training_set_size)
     obs_testing_data = tl.generate_train_data_rand_init(env=env, dataset_size=testing_set_size)
-
     print("Finished generating training and testing data")
 
-    # inspectData(obs_training_data)
-
+    # Create and train the QBN
     qbn = QuantisedBottleneckNetwork(input_vec_dim, quant_vector_dim, training_batch_size, learning_rate, weight_decay, epochs, training_set_size)
-
     print("Training the QBN now")
-    qbn = trainingLoop(qbn, obs_training_data, obs_testing_data, test_batch_size)
+    qbn = train_loop(qbn, obs_training_data, obs_testing_data, test_batch_size)
     print("Finished training the QBN")
 
+    # Save the trained model
     torch.save(qbn.state_dict(), trained_model_loc)
 
-    average_loss = evaluateQBN(qbn, obs_testing_data, test_batch_size)
+    # Evaluate the model's performance
+    average_loss = eval_qbn(qbn, obs_testing_data, test_batch_size)
     print("Average Loss: {}".format(average_loss))
