@@ -8,7 +8,7 @@ import gym
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import PCA
-
+import tools as tl
 from qbn import QuantisedBottleneckNetwork
 
 # Defines a policy for an agent to choose actions at each timestep. Initially random
@@ -127,7 +127,7 @@ def kmeans_clustering(state_seqs, no_of_clusters):
     )
     kmeans = KMeans(n_clusters=no_of_clusters)
     labels = kmeans.fit_predict(pca_df)
-    # plotKMeansClustering(pca_df, labels, no_of_clusters)
+    # plot_kmeans_clustering(pca_df, labels, no_of_clusters)
     return labels
 
 
@@ -147,7 +147,7 @@ def extract_labels_from_clusters(cluster_labels):
 # Plots distribution of cluster labels over different state sequences
 
 
-def plot_cluster_labels_over_traces(state_seqs, cluster_labels, num_succ_traces):
+def plot_cluster_labels_over_trace(state_seqs, cluster_labels, num_succ_traces):
     succ_trace_index = 0
     state_index_in_trace = 0
     cluster_label_index = 0
@@ -182,11 +182,11 @@ def extract_events_from_clustering(state_seqs):
     conc_state_seqs = np.concatenate(state_seqs)
     no_of_events = 2
     cluster_labels = kmeans_clustering(conc_state_seqs, 2**no_of_events)
-    print(cluster_labels)
-    # plot_cluster_labels_over_traces(state_seqs, cluster_labels, len(state_seqs))
-    print("Extracting labels from the clusters")
-    event_labels = extract_labels_from_clusters(cluster_labels)
-    return event_labels
+    return cluster_labels
+    # plot_cluster_labels_over_trace(state_seqs, cluster_labels, len(state_seqs))
+    # print("Extracting labels from the clusters")
+    # event_labels = extract_labels_from_clusters(cluster_labels)
+    # return event_labels
 
 
 # Calculates the cosine similarity score between two vectors and records the indices of states that are similar enough (where enough is determined by a threshold score provided as input)
@@ -292,19 +292,34 @@ def runEventPrediction(num_succ_traces, num_episodes):
 
     # Alternatively, extract labels from latent vectors with k-means clustering
     event_labels = extract_events(state_seqs=encoded_seqs, pairwise_comp=False)
+    print(event_labels)
+
+    conc_relevant_events = np.concatenate(relevant_events)
+
+    tl.compare_events_pred_with_events_from_env(event_labels, conc_relevant_events, shortest_ep_durations)
 
     # Perform evaluation of extracted labels
-    conc_relevant_events = np.concatenate(relevant_events)
-    correct_labels = [
-        l1 for l1, l2 in zip(event_labels, conc_relevant_events) if l1 == l2
-    ]
-    accuracy = len(correct_labels) / len(conc_relevant_events)
-    print("Accuracy of predicted mapping of event labels is {}".format(accuracy))
+    # conc_relevant_events = np.concatenate(relevant_events)
+    # correct_labels = [
+    #     l1 for l1, l2 in zip(event_labels, conc_relevant_events) if l1 == l2
+    # ]
+    # accuracy = len(correct_labels) / len(conc_relevant_events)
+    # print("Accuracy of predicted mapping of event labels is {}".format(accuracy))
 
-    return accuracy
+    # return accuracy
+
+def playWithEnv():
+    env = gym.make(
+        "gym_subgoal_automata:WaterWorldRedGreen-v0",
+        params={"generation": "random", "environment_seed": 0},
+    )
+    env.reset()
+    env.render()
 
 if __name__ == "__main__":
-    runEventPrediction(50, 500)
+    # playWithEnv()
+    runEventPrediction(2, 10)
+    
     # title = 'Accuracy of event prediction over number of episodes. No of successful traces: {}'.format(NUM_SUCC_TRACES)
     # plt.xlabel("Number of episodes")
     # plt.ylabel("Accuracy of event prediction")
@@ -313,14 +328,3 @@ if __name__ == "__main__":
     # plt.grid(True)
     # plt.savefig(os.path.join("results/", "accuracy_vs_no_episodes.png"))
     # plt.clf()
-
-    # for ((i, x), (j, y)) in sim_states_indices:
-    #     # print("({}, {}), ({}, {})".format(i, x, j, y))
-    #     events_observed_1 = relevant_events[i][x]
-    #     events_observed_2 = relevant_events[j][y]
-    #     if (events_observed_1 != set() and events_observed_2 != set()):
-    #         print("({}, {}), ({}, {})".format(i, x, j, y))
-    #         print("Events observed 1")
-    #         print(events_observed_1)
-    #         print("Events observed 2")
-    #         print(events_observed_2)
