@@ -147,15 +147,15 @@ def extract_labels_from_clusters(cluster_labels):
 # Plots distribution of cluster labels over different state sequences
 
 
-def plot_cluster_labels_over_traces(state_seqs, cluster_labels):
+def plot_cluster_labels_over_traces(state_seqs, cluster_labels, num_succ_traces):
     succ_trace_index = 0
     state_index_in_trace = 0
     cluster_label_index = 0
-    fig, axs = plt.subplots(NUM_SUCC_TRACES)
+    fig, axs = plt.subplots(num_succ_traces)
     fig.suptitle("Cluster labels for different traces")
 
     y_axis = []
-    while succ_trace_index < NUM_SUCC_TRACES:
+    while succ_trace_index < num_succ_traces:
         label = cluster_labels[cluster_label_index]
         y_axis.append(label)
         state_index_in_trace += 1
@@ -183,7 +183,7 @@ def extract_events_from_clustering(state_seqs):
     no_of_events = 2
     cluster_labels = kmeans_clustering(conc_state_seqs, 2**no_of_events)
     print(cluster_labels)
-    # plot_cluster_labels_over_traces(state_seqs, cluster_labels)
+    # plot_cluster_labels_over_traces(state_seqs, cluster_labels, len(state_seqs))
     print("Extracting labels from the clusters")
     event_labels = extract_labels_from_clusters(cluster_labels)
     return event_labels
@@ -224,7 +224,7 @@ def extract_events_from_pairwise_comp(state_seqs):
             sim_threshold
         )
     )
-    for i in range(NUM_SUCC_TRACES):
+    for i in range(len(state_seqs)):
         for j in range(len(sim_states_indices[i])):
             print("Vectors similar to the {}th state in the {}th trace:".format(j, i))
             print(sim_states_indices[i][j])
