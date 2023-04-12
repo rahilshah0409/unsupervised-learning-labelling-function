@@ -1,3 +1,4 @@
+import os
 import random
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -182,7 +183,7 @@ def extract_events_from_clustering(state_seqs):
     no_of_events = 2
     cluster_labels = kmeans_clustering(conc_state_seqs, 2**no_of_events)
     print(cluster_labels)
-    plot_cluster_labels_over_traces(state_seqs, cluster_labels)
+    # plot_cluster_labels_over_traces(state_seqs, cluster_labels)
     print("Extracting labels from the clusters")
     event_labels = extract_labels_from_clusters(cluster_labels)
     return event_labels
@@ -245,40 +246,21 @@ def extract_events(state_seqs, pairwise_comp):
         else extract_events_from_clustering(state_seqs)
     )
 
-
-if __name__ == "__main__":
+def runEventPrediction(num_succ_traces, num_episodes):
     env = gym.make(
         "gym_subgoal_automata:WaterWorldRedGreen-v0",
         params={"generation": "random", "environment_seed": 0},
     )
     trained_model_loc = "./trainedQBN/finalModel.pth"
 
-    NUM_SUCC_TRACES = 2
-    NUM_EPISODES = 10
-
-    # Generate successful traces for the task
-    episode_durations, states_traversed, episode_events = run_agent(
-        env, NUM_EPISODES)
-
-    # Get the shortest traces- they are the most relevant
-    (
-        shortest_ep_durations,
-        relevant_state_seqs,
-        relevant_events,
-    ) = extract_shortest_succ_traces(
-        episode_durations, states_traversed, episode_events, NUM_SUCC_TRACES
-    )
-
     # Load the QBN (trained through the program qbnTrainAndEval.py)
     input_vec_dim = 52
     quant_vector_dim = 100
     training_batch_size = 32
-    test_batch_size = 32
     learning_rate = 1e-4
     weight_decay = 0
     epochs = 300
     training_set_size = 8192
-    testing_set_size = 2048
     qbn = QuantisedBottleneckNetwork(
         input_vec_dim,
         quant_vector_dim,
@@ -290,6 +272,19 @@ if __name__ == "__main__":
     )
     qbn.load_state_dict(torch.load(trained_model_loc))
     print("QBN loaded")
+
+    # Generate successful traces for the task
+    episode_durations, states_traversed, episode_events = run_agent(
+        env, num_episodes)
+    
+    # Get the shortest traces- they are the most relevant
+    (
+        shortest_ep_durations,
+        relevant_state_seqs,
+        relevant_events,
+    ) = extract_shortest_succ_traces(
+        episode_durations, states_traversed, episode_events, num_succ_traces
+    )
 
     # Encoded every state (tensor object) in every sequence with the QBN
     print("Using QBN to encode states")
@@ -305,6 +300,19 @@ if __name__ == "__main__":
     ]
     accuracy = len(correct_labels) / len(conc_relevant_events)
     print("Accuracy of predicted mapping of event labels is {}".format(accuracy))
+
+    return accuracy
+
+if __name__ == "__main__":
+    runEventPrediction(50, 500)
+    # title = 'Accuracy of event prediction over number of episodes. No of successful traces: {}'.format(NUM_SUCC_TRACES)
+    # plt.xlabel("Number of episodes")
+    # plt.ylabel("Accuracy of event prediction")
+    # plt.title(title)
+    # plt.plot(NUM_EPISODES_ARR, accuracy_vals)
+    # plt.grid(True)
+    # plt.savefig(os.path.join("results/", "accuracy_vs_no_episodes.png"))
+    # plt.clf()
 
     # for ((i, x), (j, y)) in sim_states_indices:
     #     # print("({}, {}), ({}, {})".format(i, x, j, y))
