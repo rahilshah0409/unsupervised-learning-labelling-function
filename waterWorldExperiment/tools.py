@@ -225,24 +225,41 @@ def compare_changes_in_events(events_pred, events_from_env, ep_durations):
     last_event_from_env = events_from_env[label_index]
     last_cluster_label = events_pred[label_index]
 
+    precision_scores = []
+    recall_scores = []
     changes_in_clusters = []
     changes_in_env_events = []
     while succ_trace_index < num_succ_traces:
         curr_cluster_label = events_pred[label_index]
         curr_event_from_env = events_from_env[label_index]
         if last_event_from_env != curr_event_from_env:
-            changes_in_env_events.append((succ_trace_index, state_index_in_trace, last_event_from_env, curr_event_from_env))
+            changes_in_env_events.append((state_index_in_trace, last_event_from_env, curr_event_from_env))
         if last_cluster_label != curr_cluster_label:
-            changes_in_clusters.append((succ_trace_index, state_index_in_trace, last_cluster_label, curr_cluster_label))
+            changes_in_clusters.append((state_index_in_trace, last_cluster_label, curr_cluster_label))
         state_index_in_trace += 1
         label_index += 1
         last_event_from_env = curr_event_from_env
         last_cluster_label = curr_cluster_label
         if state_index_in_trace >= ep_durations[succ_trace_index]:
+            precison, recall = precision_and_recall_calculator(changes_in_clusters, changes_in_env_events)
+            precision_scores.append(precison)
+            recall_scores.append(recall)
+
             succ_trace_index += 1
             state_index_in_trace = 0
+            changes_in_clusters = []
+            changes_in_env_events = []
             if succ_trace_index < num_succ_traces:
                 last_event_from_env = events_from_env[label_index]
                 last_cluster_label = events_pred[label_index]
 
-    return changes_in_clusters, changes_in_env_events
+    return precision_scores, recall_scores
+
+def precision_and_recall_calculator(changes_in_clusters, changes_in_env_events):
+    cluster_indices, _, _ = zip(*changes_in_clusters)
+    env_e_indices, _, _ = zip(*changes_in_env_events)
+    precise_changes = list(filter(lambda change: change[0] in env_e_indices, changes_in_clusters))
+    precision = len(precise_changes) / len(changes_in_clusters)
+    recall_changes = list(filter(lambda change: change[0] in cluster_indices, changes_in_env_events))
+    recall = len(recall_changes) / len(env_e_indices)
+    return precision, recall

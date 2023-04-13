@@ -243,10 +243,10 @@ def runEventPrediction(env, num_succ_traces, num_episodes, use_pairwise_comp):
 
     conc_relevant_events = np.concatenate(relevant_events)
     tl.plot_events_pred_events_from_env_dist(event_labels, conc_relevant_events, shortest_ep_durations)
-    changes_in_clusters, changes_in_env_events = tl.compare_changes_in_events(event_labels, conc_relevant_events, shortest_ep_durations)
-    # print(changes_in_env_events)
-    # print(changes_in_clusters)
-    
+    precision_scores, recall_scores = tl.compare_changes_in_events(event_labels, conc_relevant_events, shortest_ep_durations)
+    print(precision_scores)
+    print(recall_scores)
+
     # Perform evaluation of extracted labels
     # conc_relevant_events = np.concatenate(relevant_events)
     # correct_labels = [
@@ -267,4 +267,4 @@ if __name__ == "__main__":
         "gym_subgoal_automata:WaterWorldRedGreen-v0",
         params={"generation": "random", "environment_seed": 0},
     )
-    runEventPrediction(env=env, num_succ_traces=50, num_episodes=500, use_pairwise_comp=False)
+    runEventPrediction(env=env, num_succ_traces=2, num_episodes=10, use_pairwise_comp=False)
