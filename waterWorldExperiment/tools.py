@@ -241,6 +241,11 @@ def compare_changes_in_events(events_pred, events_from_env, ep_durations):
         last_event_from_env = curr_event_from_env
         last_cluster_label = curr_cluster_label
         if state_index_in_trace >= ep_durations[succ_trace_index]:
+            print("SUCCESSFUL TRACE INDEX: {}".format(succ_trace_index))
+            print("Changes in cluster labels")
+            print(changes_in_clusters)
+            print("Changes in events from the environment")
+            print(changes_in_env_events)
             precison, recall = precision_and_recall_calculator(changes_in_clusters, changes_in_env_events)
             precision_scores.append(precison)
             recall_scores.append(recall)
