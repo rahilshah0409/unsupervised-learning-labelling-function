@@ -272,9 +272,10 @@ def runEventPrediction(env, num_succ_traces, num_episodes):
     event_labels = extract_events(state_seqs=encoded_seqs, pairwise_comp=False)
 
     conc_relevant_events = np.concatenate(relevant_events)
-    tl.plot_events_pred_events_from_env_dist(event_labels, conc_relevant_events, shortest_ep_durations)
-    tl.compare_changes_in_events(event_labels, conc_relevant_events, shortest_ep_durations)
-
+    # tl.plot_events_pred_events_from_env_dist(event_labels, conc_relevant_events, shortest_ep_durations)
+    changes_in_clusters, changes_in_env_events = tl.compare_changes_in_events(event_labels, conc_relevant_events, shortest_ep_durations)
+    print(changes_in_env_events)
+    print(changes_in_clusters)
     # Perform evaluation of extracted labels
     # conc_relevant_events = np.concatenate(relevant_events)
     # correct_labels = [
