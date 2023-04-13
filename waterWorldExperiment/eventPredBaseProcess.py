@@ -136,34 +136,6 @@ def extract_labels_from_clusters(cluster_labels):
     return event_labels
 
 
-# Plots distribution of cluster labels over different state sequences
-# def plot_cluster_labels_over_trace(state_seqs, cluster_labels, num_succ_traces):
-#     succ_trace_index = 0
-#     state_index_in_trace = 0
-#     cluster_label_index = 0
-#     fig, axs = plt.subplots(num_succ_traces)
-#     fig.suptitle("Cluster labels for different traces")
-#
-#     y_axis = []
-#     while succ_trace_index < num_succ_traces:
-#         label = cluster_labels[cluster_label_index]
-#         y_axis.append(label)
-#         state_index_in_trace += 1
-#         cluster_label_index += 1
-#         if state_index_in_trace >= len(state_seqs[succ_trace_index]):
-#             x_axis = range(state_index_in_trace)
-#             axs[succ_trace_index].plot(x_axis, y_axis)
-#             axs[succ_trace_index].set_title(
-#                 "Trace {}".format(succ_trace_index))
-#             axs[succ_trace_index].set(
-#                 xlabel="State index", ylabel="Cluster labels")
-#             succ_trace_index += 1
-#             state_index_in_trace = 0
-#             y_axis = []
-#
-#     plt.show()
-
-
 # Extract labels for events with a clustering method
 def extract_events_from_clustering(state_seqs):
     print("Clustering the state sequences with KMeans and PCA")
@@ -185,8 +157,6 @@ def extract_sim_states(state_seqs, sim_threshold):
         for j in range(len(state_seqs)):
             state_seq_i = state_seqs[i]
             state_seq_j = state_seqs[j]
-            print(len(state_seq_i))
-            print(len(state_seq_j))
             if state_seq_i != state_seq_j:
                 cos_sims = cosine_similarity(state_seq_i, state_seq_j)
                 for x in range(len(state_seq_i)):
@@ -228,7 +198,7 @@ def extract_events(state_seqs, pairwise_comp):
     )
 
 
-def runEventPrediction(env, num_succ_traces, num_episodes):
+def runEventPrediction(env, num_succ_traces, num_episodes, use_pairwise_comp):
     trained_model_loc = "./trainedQBN/finalModel.pth"
 
     # Load the QBN (trained through the program qbnTrainAndEval.py)
@@ -269,13 +239,14 @@ def runEventPrediction(env, num_succ_traces, num_episodes):
     encoded_seqs = encode_state_seqs(qbn, relevant_state_seqs)
 
     # Alternatively, extract labels from latent vectors with k-means clustering (cluster labels)
-    event_labels = extract_events(state_seqs=encoded_seqs, pairwise_comp=False)
+    event_labels = extract_events(state_seqs=encoded_seqs, pairwise_comp=use_pairwise_comp)
 
     conc_relevant_events = np.concatenate(relevant_events)
-    # tl.plot_events_pred_events_from_env_dist(event_labels, conc_relevant_events, shortest_ep_durations)
+    tl.plot_events_pred_events_from_env_dist(event_labels, conc_relevant_events, shortest_ep_durations)
     changes_in_clusters, changes_in_env_events = tl.compare_changes_in_events(event_labels, conc_relevant_events, shortest_ep_durations)
-    print(changes_in_env_events)
-    print(changes_in_clusters)
+    # print(changes_in_env_events)
+    # print(changes_in_clusters)
+    
     # Perform evaluation of extracted labels
     # conc_relevant_events = np.concatenate(relevant_events)
     # correct_labels = [
@@ -296,4 +267,4 @@ if __name__ == "__main__":
         "gym_subgoal_automata:WaterWorldRedGreen-v0",
         params={"generation": "random", "environment_seed": 0},
     )
-    runEventPrediction(env, 50, 500)
+    runEventPrediction(env=env, num_succ_traces=50, num_episodes=500, use_pairwise_comp=False)
