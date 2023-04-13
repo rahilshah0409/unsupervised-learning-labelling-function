@@ -8,12 +8,12 @@ import gym
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
 import tools as tl
 from qbn import QuantisedBottleneckNetwork
 
+
 # Defines a policy for an agent to choose actions at each timestep. Initially random
-
-
 def choose_action():
     NUM_ACTIONS = 5
     action_probs = np.full(NUM_ACTIONS, 1 / NUM_ACTIONS)
@@ -21,9 +21,8 @@ def choose_action():
     return action
 
 
-# Runs an agent in the given environment for a given number of episodes, keeping track of the states traversed and events observed at every time step
-
-
+# Runs an event with a random policy and keeps track of successful traces and the states and episodes observed in
+# each trace
 def run_agent(env, num_episodes):
     episode_durations = []
     states_traversed = []
@@ -54,10 +53,8 @@ def run_agent(env, num_episodes):
 
 
 # Extracts the n shortest successful traces, where n is no_of_traces_to_extract
-
-
 def extract_shortest_succ_traces(
-    trace_lengths, states, events, no_of_traces_to_extract
+        trace_lengths, states, events, no_of_traces_to_extract
 ):
     sorted_trace_lengths = sorted(trace_lengths)
     extracted_state_seqs = []
@@ -72,8 +69,6 @@ def extract_shortest_succ_traces(
 
 
 # Given a list of state sequences, encodes every state in every sequence with the QBN given
-
-
 def encode_state_seqs(qbn, state_seqs):
     encoded_seqs = []
     state_seqs = list(
@@ -92,18 +87,19 @@ def encode_state_seqs(qbn, state_seqs):
     return encoded_seqs
 
 
-# Uses principal component analysis to reduce the dimensionality of the data into two dimensions. This will help for visualisation of the KMeans clustering
-
-
-def dataset_dim_reduction(states):
-    pca2 = PCA(n_components=2)
-    principal_components = pca2.fit_transform(states)
+# Reduce the dimensionality of the data into two dimensions. This will help for visualisation of the KMeans clustering
+def dataset_dim_reduction(states, use_tsne):
+    principal_components = None
+    if use_tsne:
+        tsne = TSNE(n_components=2)
+        principal_components = tsne.fit_transform(states)
+    else:
+        pca2 = PCA(n_components=2)
+        principal_components = pca2.fit_transform(states)
     return principal_components
 
 
 # Plots the KMeans clusters
-
-
 def plot_kmeans_clustering(df, labels, no_of_clusters):
     for i in range(no_of_clusters):
         filtered_df = df[labels == i]
@@ -117,24 +113,20 @@ def plot_kmeans_clustering(df, labels, no_of_clusters):
 
 
 # Performs KMeans clustering on the state sequences and plots the resulting data
-
-
 def kmeans_clustering(state_seqs, no_of_clusters):
-    principal_components = dataset_dim_reduction(state_seqs)
+    principal_components = dataset_dim_reduction(states=state_seqs, use_tsne=False)
     pca_df = pd.DataFrame(
         data=principal_components,
         columns=["Principal component 1", "Principal component 2"],
     )
     kmeans = KMeans(n_clusters=no_of_clusters)
     labels = kmeans.fit_predict(pca_df)
-    # plot_kmeans_clustering(pca_df, labels, no_of_clusters)
+    plot_kmeans_clustering(pca_df, labels, no_of_clusters)
     return labels
 
 
 # Given the cluster that each event is assigned to, extract an event label from them
 # TODO: Change this approach (currently naive)
-
-
 def extract_labels_from_clusters(cluster_labels):
     event_labels = []
     hardcoded_mapping = {"0": set(), "1": {"r"}, "2": {"b"}, "3": {"b", "r"}}
@@ -145,53 +137,46 @@ def extract_labels_from_clusters(cluster_labels):
 
 
 # Plots distribution of cluster labels over different state sequences
-
-
-def plot_cluster_labels_over_trace(state_seqs, cluster_labels, num_succ_traces):
-    succ_trace_index = 0
-    state_index_in_trace = 0
-    cluster_label_index = 0
-    fig, axs = plt.subplots(num_succ_traces)
-    fig.suptitle("Cluster labels for different traces")
-
-    y_axis = []
-    while succ_trace_index < num_succ_traces:
-        label = cluster_labels[cluster_label_index]
-        y_axis.append(label)
-        state_index_in_trace += 1
-        cluster_label_index += 1
-        if state_index_in_trace >= len(state_seqs[succ_trace_index]):
-            x_axis = range(state_index_in_trace)
-            axs[succ_trace_index].plot(x_axis, y_axis)
-            axs[succ_trace_index].set_title(
-                "Trace {}".format(succ_trace_index))
-            axs[succ_trace_index].set(
-                xlabel="State index", ylabel="Cluster labels")
-            succ_trace_index += 1
-            state_index_in_trace = 0
-            y_axis = []
-
-    plt.show()
+# def plot_cluster_labels_over_trace(state_seqs, cluster_labels, num_succ_traces):
+#     succ_trace_index = 0
+#     state_index_in_trace = 0
+#     cluster_label_index = 0
+#     fig, axs = plt.subplots(num_succ_traces)
+#     fig.suptitle("Cluster labels for different traces")
+#
+#     y_axis = []
+#     while succ_trace_index < num_succ_traces:
+#         label = cluster_labels[cluster_label_index]
+#         y_axis.append(label)
+#         state_index_in_trace += 1
+#         cluster_label_index += 1
+#         if state_index_in_trace >= len(state_seqs[succ_trace_index]):
+#             x_axis = range(state_index_in_trace)
+#             axs[succ_trace_index].plot(x_axis, y_axis)
+#             axs[succ_trace_index].set_title(
+#                 "Trace {}".format(succ_trace_index))
+#             axs[succ_trace_index].set(
+#                 xlabel="State index", ylabel="Cluster labels")
+#             succ_trace_index += 1
+#             state_index_in_trace = 0
+#             y_axis = []
+#
+#     plt.show()
 
 
 # Extract labels for events with a clustering method
-
-
 def extract_events_from_clustering(state_seqs):
     print("Clustering the state sequences with KMeans and PCA")
     conc_state_seqs = np.concatenate(state_seqs)
     no_of_events = 2
-    cluster_labels = kmeans_clustering(conc_state_seqs, 2**no_of_events)
+    cluster_labels = kmeans_clustering(conc_state_seqs, 2 ** no_of_events)
     return cluster_labels
-    # plot_cluster_labels_over_trace(state_seqs, cluster_labels, len(state_seqs))
     # print("Extracting labels from the clusters")
     # event_labels = extract_labels_from_clusters(cluster_labels)
     # return event_labels
 
 
-# Calculates the cosine similarity score between two vectors and records the indices of states that are similar enough (where enough is determined by a threshold score provided as input)
-
-
+# Calculates the cosine similarity score between two vectors and records the indices of states that are similar enough
 def extract_sim_states(state_seqs, sim_threshold):
     similar_states_indices = [
         [[] for _ in range(len(state_seqs[x]))] for x in range(len(state_seqs))
@@ -214,8 +199,6 @@ def extract_sim_states(state_seqs, sim_threshold):
 
 
 # Extracts event labels by comparing state vectors across different successful traces
-
-
 def extract_events_from_pairwise_comp(state_seqs):
     sim_threshold = 0.82
     sim_states_indices = extract_sim_states(state_seqs, sim_threshold)
@@ -237,8 +220,6 @@ def extract_events_from_pairwise_comp(state_seqs):
 
 
 # Extracts event labels of the given state sequences, either by pairwise comparison or clustering
-
-
 def extract_events(state_seqs, pairwise_comp):
     return (
         extract_events_from_pairwise_comp(state_seqs)
@@ -246,11 +227,8 @@ def extract_events(state_seqs, pairwise_comp):
         else extract_events_from_clustering(state_seqs)
     )
 
-def runEventPrediction(num_succ_traces, num_episodes):
-    env = gym.make(
-        "gym_subgoal_automata:WaterWorldRedGreen-v0",
-        params={"generation": "random", "environment_seed": 0},
-    )
+
+def runEventPrediction(env, num_succ_traces, num_episodes):
     trained_model_loc = "./trainedQBN/finalModel.pth"
 
     # Load the QBN (trained through the program qbnTrainAndEval.py)
@@ -276,7 +254,7 @@ def runEventPrediction(num_succ_traces, num_episodes):
     # Generate successful traces for the task
     episode_durations, states_traversed, episode_events = run_agent(
         env, num_episodes)
-    
+
     # Get the shortest traces- they are the most relevant
     (
         shortest_ep_durations,
@@ -290,13 +268,12 @@ def runEventPrediction(num_succ_traces, num_episodes):
     print("Using QBN to encode states")
     encoded_seqs = encode_state_seqs(qbn, relevant_state_seqs)
 
-    # Alternatively, extract labels from latent vectors with k-means clustering
+    # Alternatively, extract labels from latent vectors with k-means clustering (cluster labels)
     event_labels = extract_events(state_seqs=encoded_seqs, pairwise_comp=False)
-    print(event_labels)
 
     conc_relevant_events = np.concatenate(relevant_events)
-
-    tl.compare_events_pred_with_events_from_env(event_labels, conc_relevant_events, shortest_ep_durations)
+    tl.plot_events_pred_events_from_env_dist(event_labels, conc_relevant_events, shortest_ep_durations)
+    tl.compare_changes_in_events(event_labels, conc_relevant_events, shortest_ep_durations)
 
     # Perform evaluation of extracted labels
     # conc_relevant_events = np.concatenate(relevant_events)
@@ -308,23 +285,14 @@ def runEventPrediction(num_succ_traces, num_episodes):
 
     # return accuracy
 
-def playWithEnv():
+
+if __name__ == "__main__":
+    # env = gym.make(
+    #     "gym_subgoal_automata:WaterWorldRed-v0",
+    #     params={"generation": "random", "environment_seed": 0},
+    # )
     env = gym.make(
         "gym_subgoal_automata:WaterWorldRedGreen-v0",
         params={"generation": "random", "environment_seed": 0},
     )
-    env.reset()
-    env.render()
-
-if __name__ == "__main__":
-    # playWithEnv()
-    runEventPrediction(2, 10)
-    
-    # title = 'Accuracy of event prediction over number of episodes. No of successful traces: {}'.format(NUM_SUCC_TRACES)
-    # plt.xlabel("Number of episodes")
-    # plt.ylabel("Accuracy of event prediction")
-    # plt.title(title)
-    # plt.plot(NUM_EPISODES_ARR, accuracy_vals)
-    # plt.grid(True)
-    # plt.savefig(os.path.join("results/", "accuracy_vs_no_episodes.png"))
-    # plt.clf()
+    runEventPrediction(env, 50, 500)

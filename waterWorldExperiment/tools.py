@@ -142,7 +142,7 @@ def trainQBN(qbn, train_data):
 
   return qbn
 
-def compare_events_pred_with_events_from_env(events_pred, events_from_env, ep_durations):
+def plot_events_pred_events_from_env_dist(events_pred, events_from_env, ep_durations):
     succ_trace_index = 0
     state_index_in_trace = 0
     cluster_label_index = 0
@@ -184,3 +184,36 @@ def convert_obs_set_to_str(obs):
       return "Green"
    else:
       return "None"
+   
+def compare_changes_in_events(events_pred, events_from_env, ep_durations):
+    succ_trace_index = 0
+    state_index_in_trace = 0
+    cluster_label_index = 0
+    num_succ_traces = len(ep_durations)
+    events_from_env = list(map(convert_obs_set_to_str, events_from_env))
+
+    fig, axs = plt.subplots(num_succ_traces, 2)
+    fig.suptitle("Cluster labels vs events from environment")
+
+    y_axis_pred = []
+    y_axis_from_env = []
+    while succ_trace_index < len(ep_durations):
+        label_pred = events_pred[cluster_label_index]
+        event_from_env = events_from_env[cluster_label_index]
+        y_axis_pred.append(label_pred)
+        y_axis_from_env.append(event_from_env)
+        state_index_in_trace += 1
+        cluster_label_index += 1
+        if state_index_in_trace >= ep_durations[succ_trace_index]:
+            x_axis = range(state_index_in_trace)
+            axs[succ_trace_index, 0].plot(x_axis, y_axis_pred, 'o')
+            axs[succ_trace_index, 0].set(
+                xlabel="State index", ylabel="Cluster labels")
+            axs[succ_trace_index, 1].plot(x_axis, y_axis_from_env, 'o')
+            axs[succ_trace_index, 1].set(xlabel="State index", ylabel="Event labels")
+            succ_trace_index += 1
+            state_index_in_trace = 0
+            y_axis_pred = []
+            y_axis_from_env = []
+
+    plt.show()
