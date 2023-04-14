@@ -261,8 +261,12 @@ def compare_changes_in_events(events_pred, events_from_env, ep_durations):
     return precision_scores, recall_scores
 
 def precision_and_recall_calculator(changes_in_clusters, changes_in_env_events):
-    cluster_indices, _, _ = zip(*changes_in_clusters)
-    env_e_indices, _, _ = zip(*changes_in_env_events)
+    cluster_indices = []
+    if (changes_in_clusters != []):
+        cluster_indices, _, _ = zip(*changes_in_clusters)
+    env_e_indices = []
+    if changes_in_env_events != []:
+        env_e_indices, _, _ = zip(*changes_in_env_events)
     precise_changes = list(filter(lambda change: change[0] in env_e_indices, changes_in_clusters))
     precision = len(precise_changes) / len(changes_in_clusters)
     recall_changes = list(filter(lambda change: change[0] in cluster_indices, changes_in_env_events))
