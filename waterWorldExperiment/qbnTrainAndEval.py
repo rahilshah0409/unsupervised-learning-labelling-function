@@ -147,16 +147,18 @@ if __name__ == '__main__':
         env=env, dataset_size=testing_set_size)
     print("Finished generating training and testing data")
 
+    print(obs_training_data)
+
     # Create and train the QBN
-    qbn = QuantisedBottleneckNetwork(input_vec_dim, quant_vector_dim, training_batch_size,
-                                     learning_rate, weight_decay, epochs, training_set_size)
-    print("Training the QBN now")
-    qbn = train_loop(qbn, obs_training_data, obs_testing_data, test_batch_size)
-    print("Finished training the QBN")
+    # qbn = QuantisedBottleneckNetwork(input_vec_dim, quant_vector_dim, training_batch_size,
+    #                                  learning_rate, weight_decay, epochs, training_set_size)
+    # print("Training the QBN now")
+    # qbn = train_loop(qbn, obs_training_data, obs_testing_data, test_batch_size)
+    # print("Finished training the QBN")
 
-    # Save the trained model
-    # torch.save(qbn.state_dict(), trained_model_loc)
+    # # Save the trained model
+    # # torch.save(qbn.state_dict(), trained_model_loc)
 
-    # Evaluate the model's performance
-    average_loss = eval_qbn(qbn, obs_testing_data, test_batch_size)
-    print("Average Loss: {}".format(average_loss))
+    # # Evaluate the model's performance
+    # average_loss = eval_qbn(qbn, obs_testing_data, test_batch_size)
+    # print("Average Loss: {}".format(average_loss))

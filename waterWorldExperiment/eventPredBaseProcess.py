@@ -27,6 +27,7 @@ def run_agent(env, num_episodes):
     episode_durations = []
     states_traversed = []
     events_per_episode = []
+    actions_per_episode = []
     for ep in range(num_episodes):
         print("Episode {} in progress".format(ep + 1))
 
@@ -35,8 +36,11 @@ def run_agent(env, num_episodes):
         states.append(state)
         events_observed = [set()]
         done, terminated, t = False, False, 1
+        actions = []
+
         while not (done or terminated):
             action = choose_action()
+            actions.append(action)
             next_state, _, done, observations = env.step(action)
             state = next_state
             states.append(state)
@@ -47,25 +51,28 @@ def run_agent(env, num_episodes):
             if done:
                 episode_durations.append((t, ep))
 
+        actions_per_episode.append(actions)
         states_traversed.append(states)
         events_per_episode.append(events_observed)
-    return episode_durations, states_traversed, events_per_episode
+    return episode_durations, states_traversed, events_per_episode, actions_per_episode
 
 
 # Extracts the n shortest successful traces, where n is no_of_traces_to_extract
 def extract_shortest_succ_traces(
-        trace_lengths, states, events, no_of_traces_to_extract
+        trace_lengths, states, events, actions, no_of_traces_to_extract
 ):
     sorted_trace_lengths = sorted(trace_lengths)
     extracted_state_seqs = []
     extracted_events = []
     extracted_ep_durations = []
+    extracted_actions = []
     for i in range(no_of_traces_to_extract):
         (length, index) = sorted_trace_lengths[i]
         extracted_state_seqs.append(states[index])
         extracted_events.append(events[index])
+        extracted_actions.append(actions[index])
         extracted_ep_durations.append(length)
-    return extracted_ep_durations, extracted_state_seqs, extracted_events
+    return extracted_ep_durations, extracted_state_seqs, extracted_events, extracted_actions
 
 
 # Given a list of state sequences, encodes every state in every sequence with the QBN given
@@ -222,7 +229,7 @@ def runEventPrediction(env, num_succ_traces, num_episodes, use_pairwise_comp):
     print("QBN loaded")
 
     # Generate successful traces for the task
-    episode_durations, states_traversed, episode_events = run_agent(
+    episode_durations, states_traversed, episode_events, actions_per_episodes = run_agent(
         env, num_episodes)
 
     # Get the shortest traces- they are the most relevant
@@ -230,9 +237,12 @@ def runEventPrediction(env, num_succ_traces, num_episodes, use_pairwise_comp):
         shortest_ep_durations,
         relevant_state_seqs,
         relevant_events,
+        relevant_actions
     ) = extract_shortest_succ_traces(
-        episode_durations, states_traversed, episode_events, num_succ_traces
+        episode_durations, states_traversed, episode_events, actions_per_episodes, num_succ_traces
     )
+
+    # print(relevant_actions)
 
     # Encoded every state (tensor object) in every sequence with the QBN
     print("Using QBN to encode states")
