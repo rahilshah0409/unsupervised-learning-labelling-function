@@ -29,25 +29,33 @@ if __name__ == "__main__":
     no_of_runs = 2
     actions_list = []
     state_seqs = []
+    times_per_run = []
     for _ in range(no_of_runs):
-        actions, states = env.play()
+        actions, states, times = env.play()
         actions_list.append(actions)
         state_seqs.append(states)
+        times_per_run.append(times)
 
-    print(actions_list)
+    # print(actions_list)
+    # print(state_seqs)
     cluster_labels = extract_events(state_seqs=state_seqs, pairwise_comp=False)
   
     cluster_label_ix = 0
-    time_to_sleep = 0.5
+    time_to_sleep = 0.1
+    state_seqs_replay = []
     for i in range(no_of_runs):
+        state_seq_replay = []
         state = env.reset()
+        state_seq_replay.append(state)
         env.render()
         time.sleep(time_to_sleep)
         prev_label = 0
+        # print(actions_list[i])
         for j in range(len(actions_list[i])):
             action = actions_list[i][j]
-            print("Action: {}".format(action))
-            state, _, _, _ = env.step(action)
+            t_delta = times_per_run[i][j]
+            state, _, _, _ = env.step(action, t_delta)
+            state_seq_replay.append(state)
             label = cluster_labels[cluster_label_ix]
             if prev_label != label:
                 print("HAVE WE OVERLAPPED WITH ONE OF THE BALLS?")
@@ -55,7 +63,13 @@ if __name__ == "__main__":
             env.render()
             prev_label = label
             time.sleep(time_to_sleep)
-            cluster_label_ix +=1
+            cluster_label_ix += 1
+        state_seqs_replay.append(state_seq_replay)
+
+    for i in range(no_of_runs):
+        for j in range(len(state_seqs[i])): 
+            if state_seqs_replay[i][j].all() != state_seqs[i][j].all():
+                print("DISCREPENCY HERE {} {}".format(i, j))
 
 
     # no_of_runs = 10
