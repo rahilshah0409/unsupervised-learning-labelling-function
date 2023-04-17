@@ -268,7 +268,7 @@ def precision_and_recall_calculator(changes_in_clusters, changes_in_env_events):
     if changes_in_env_events != []:
         env_e_indices, _, _ = zip(*changes_in_env_events)
     precise_changes = list(filter(lambda change: change[0] in env_e_indices, changes_in_clusters))
-    precision = len(precise_changes) / len(changes_in_clusters)
+    precision = 0 if len(changes_in_clusters) == 0 else len(precise_changes) / len(changes_in_clusters)
     recall_changes = list(filter(lambda change: change[0] in cluster_indices, changes_in_env_events))
-    recall = len(recall_changes) / len(env_e_indices)
+    recall = 0 if len(env_e_indices) == 0 else len(recall_changes) / len(env_e_indices)
     return precision, recall

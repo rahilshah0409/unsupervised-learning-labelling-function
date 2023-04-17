@@ -121,7 +121,7 @@ def plot_kmeans_clustering(df, labels, no_of_clusters):
 
 # Performs KMeans clustering on the state sequences and plots the resulting data
 def kmeans_clustering(state_seqs, no_of_clusters):
-    principal_components = dataset_dim_reduction(states=state_seqs, use_tsne=False)
+    principal_components = dataset_dim_reduction(states=state_seqs, use_tsne=True)
     pca_df = pd.DataFrame(
         data=principal_components,
         columns=["Principal component 1", "Principal component 2"],
@@ -205,34 +205,14 @@ def extract_events(state_seqs, pairwise_comp):
     )
 
 
-def runEventPrediction(env, num_succ_traces, num_episodes, use_pairwise_comp):
-    trained_model_loc = "./trainedQBN/finalModel.pth"
-
-    # Load the QBN (trained through the program qbnTrainAndEval.py)
-    input_vec_dim = 52
-    quant_vector_dim = 100
-    training_batch_size = 32
-    learning_rate = 1e-4
-    weight_decay = 0
-    epochs = 300
-    training_set_size = 8192
-    qbn = QuantisedBottleneckNetwork(
-        input_vec_dim,
-        quant_vector_dim,
-        training_batch_size,
-        learning_rate,
-        weight_decay,
-        epochs,
-        training_set_size,
-    )
-    qbn.load_state_dict(torch.load(trained_model_loc))
-    print("QBN loaded")
-
+def run_event_prediction(env, num_succ_traces, num_episodes, encode_with_qbn=True, use_pairwise_comp=False):
     # Generate successful traces for the task
+    print("Agent running a random policy to get successful traces")
     episode_durations, states_traversed, episode_events, actions_per_episodes = run_agent(
         env, num_episodes)
 
     # Get the shortest traces- they are the most relevant
+    print("Getting the {} shortest successful traces".format(num_succ_traces))
     (
         shortest_ep_durations,
         relevant_state_seqs,
@@ -241,18 +221,40 @@ def runEventPrediction(env, num_succ_traces, num_episodes, use_pairwise_comp):
     ) = extract_shortest_succ_traces(
         episode_durations, states_traversed, episode_events, actions_per_episodes, num_succ_traces
     )
+    
+    print(relevant_state_seqs[0][0])
 
-    # print(relevant_actions)
+    if encode_with_qbn:
+        trained_model_loc = "./trainedQBN/finalModel.pth"
 
-    # Encoded every state (tensor object) in every sequence with the QBN
-    print("Using QBN to encode states")
-    encoded_seqs = encode_state_seqs(qbn, relevant_state_seqs)
+        # Load the QBN (trained through the program qbnTrainAndEval.py)
+        input_vec_dim = 52
+        quant_vector_dim = 100
+        training_batch_size = 32
+        learning_rate = 1e-4
+        weight_decay = 0
+        epochs = 300
+        training_set_size = 8192
+        qbn = QuantisedBottleneckNetwork(
+            input_vec_dim,
+            quant_vector_dim,
+            training_batch_size,
+            learning_rate,
+            weight_decay,
+            epochs,
+            training_set_size,
+        )
+        qbn.load_state_dict(torch.load(trained_model_loc))
+
+        # Encoded every state (tensor object) in every sequence with the QBN
+        print("Using a loaded QBN to encode states")
+        relevant_state_seqs = encode_state_seqs(qbn, relevant_state_seqs)
 
     # Alternatively, extract labels from latent vectors with k-means clustering (cluster labels)
-    event_labels = extract_events(state_seqs=encoded_seqs, pairwise_comp=use_pairwise_comp)
+    event_labels = extract_events(state_seqs=relevant_state_seqs, pairwise_comp=use_pairwise_comp)
 
     conc_relevant_events = np.concatenate(relevant_events)
-    tl.plot_events_pred_events_from_env_dist(event_labels, conc_relevant_events, shortest_ep_durations)
+    # tl.plot_events_pred_events_from_env_dist(event_labels, conc_relevant_events, shortest_ep_durations)
     precision_scores, recall_scores = tl.compare_changes_in_events(event_labels, conc_relevant_events, shortest_ep_durations)
     print(precision_scores)
     print(recall_scores)
@@ -269,12 +271,8 @@ def runEventPrediction(env, num_succ_traces, num_episodes, use_pairwise_comp):
 
 
 if __name__ == "__main__":
-    # env = gym.make(
-    #     "gym_subgoal_automata:WaterWorldRed-v0",
-    #     params={"generation": "random", "environment_seed": 0},
-    # )
     env = gym.make(
         "gym_subgoal_automata:WaterWorldRedGreen-v0",
         params={"generation": "random", "environment_seed": 0},
     )
-    runEventPrediction(env=env, num_succ_traces=2, num_episodes=10, use_pairwise_comp=False)
+    run_event_prediction(env=env, num_succ_traces=50, num_episodes=500)
