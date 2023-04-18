@@ -168,6 +168,8 @@ def trainQBN(qbn, train_data):
 
     return qbn
 
+# Plots graphs to compare how cluster labels are assigned to states in sequences vs the events that are observed in the same sequence
+
 
 def plot_events_pred_events_from_env_dist(events_pred, events_from_env, ep_durations):
     succ_trace_index = 0
@@ -203,6 +205,8 @@ def plot_events_pred_events_from_env_dist(events_pred, events_from_env, ep_durat
 
     plt.show()
 
+# Helper method that converts the observation set into a string
+
 
 def convert_obs_set_to_str(obs):
     if obs == {'r', 'g'}:
@@ -213,6 +217,8 @@ def convert_obs_set_to_str(obs):
         return "Green"
     else:
         return "None"
+
+# Method that compares changes in cluster labels to changes in events to observe if they occur at the same time
 
 
 def compare_changes_in_events(events_pred, events_from_env, ep_durations):
@@ -260,6 +266,9 @@ def compare_changes_in_events(events_pred, events_from_env, ep_durations):
 
     return precision_scores, recall_scores
 
+# Calculates the precision and recall of the changes in cluster labels and the changes in events taken from the environment
+
+
 def precision_and_recall_calculator(changes_in_clusters, changes_in_env_events):
     cluster_indices = []
     if (changes_in_clusters != []):
@@ -272,3 +281,19 @@ def precision_and_recall_calculator(changes_in_clusters, changes_in_env_events):
     recall_changes = list(filter(lambda change: change[0] in cluster_indices, changes_in_env_events))
     recall = 0 if len(env_e_indices) == 0 else len(recall_changes) / len(env_e_indices)
     return precision, recall
+
+# Plots how many states are similar to a given state in a sequence
+
+
+def plot_sim_states_freq(sim_states_arr):
+    fig, axs = plt.subplots(len(sim_states_arr))
+    fig.suptitle("Distribution of similar states for each successful trace")
+
+    for i in range(len(sim_states_arr)):
+        axs[i].set(xlabel="State indices in trace {}".format(i), ylabel="Number of states similar to state at index i")
+        yaxis = []
+        for j in range(len(sim_states_arr[i])):
+            yaxis.append(len(sim_states_arr[i][j]))
+        axs[i].plot(range(len(sim_states_arr[i])), yaxis)
+    
+    plt.show()

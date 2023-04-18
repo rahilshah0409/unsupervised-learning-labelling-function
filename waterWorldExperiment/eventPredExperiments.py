@@ -21,7 +21,7 @@ def vary_no_of_episodes(env, no_of_runs, no_of_eps_arr, no_of_succ_traces):
             accuracy_results[run].append(accuracy)
     return accuracy_results
 
-def replay_of_user_playing_with_env(env, no_of_runs):
+def user_playing_with_env(env, no_of_runs, see_replay=True):
     actions_list = []
     state_seqs = []
     times_per_run = []
@@ -33,25 +33,26 @@ def replay_of_user_playing_with_env(env, no_of_runs):
 
     cluster_labels = extract_events(state_seqs=state_seqs, pairwise_comp=False)
   
-    cluster_label_ix = 0
-    time_to_sleep = 0.1
-    for i in range(no_of_runs):
-        state = env.reset()
-        env.render()
-        time.sleep(time_to_sleep)
-        prev_label = 0
-        for j in range(len(actions_list[i])):
-            action = actions_list[i][j]
-            t_delta = times_per_run[i][j]
-            state, _, _, _ = env.step(action, t_delta)
-            label = cluster_labels[cluster_label_ix]
-            if prev_label != label:
-                print("HAVE WE OVERLAPPED WITH ONE OF THE BALLS?")
-            print("Label: {}".format(label))
+    if see_replay:
+        cluster_label_ix = 0
+        time_to_sleep = 0.1
+        for i in range(no_of_runs):
+            state = env.reset()
             env.render()
-            prev_label = label
             time.sleep(time_to_sleep)
-            cluster_label_ix += 1
+            prev_label = 0
+            for j in range(len(actions_list[i])):
+                action = actions_list[i][j]
+                t_delta = times_per_run[i][j]
+                state, _, _, _ = env.step(action, t_delta)
+                label = cluster_labels[cluster_label_ix]
+                if prev_label != label:
+                    print("HAVE WE OVERLAPPED WITH ONE OF THE BALLS?")
+                print("Label: {}".format(label))
+                env.render()
+                prev_label = label
+                time.sleep(time_to_sleep)
+                cluster_label_ix += 1
 
 if __name__ == "__main__":
     normal_env = gym.make(
@@ -93,6 +94,6 @@ if __name__ == "__main__":
     # accuracy_results_1 = vary_no_of_episodes(
     #     normal_env, no_of_runs, num_episodes_arr, num_succ_traces)
 
-    # runEventPrediction(env_with_static_balls, num_succ_traces=2, num_episodes=10, encode_with_qbn=False)
+    # run_event_prediction(env_with_static_balls, num_succ_traces=2, num_episodes=10, encode_with_qbn=False)
 
-    replay_of_user_playing_with_env(fixed_env_with_static_balls, no_of_runs=2)
+    user_playing_with_env(fixed_env_with_static_balls, no_of_runs=2, see_replay=False)

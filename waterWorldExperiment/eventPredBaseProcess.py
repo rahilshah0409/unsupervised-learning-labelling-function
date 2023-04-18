@@ -190,7 +190,7 @@ def extract_events_from_pairwise_comp(state_seqs):
             print(sim_states_indices[i][j])
             print("-------------")
         print("----------------------------------------------")
-    print(len(sim_states_indices))
+    tl.plot_sim_states_freq(sim_states_indices)
     # TODO: Change approach of extracting labels from similar states (this is naive)
     event_labels = [set() for _ in range(len(np.concatenate(state_seqs)))]
     return event_labels
