@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from eventPredBaseProcess import run_event_prediction, extract_events
+from waterWorldExperiment.trainKMeansClustering import run_clustering, extract_events
 import gym
 
 
@@ -8,7 +8,7 @@ def vary_no_of_succ_traces(env, no_of_runs, no_of_succ_traces_arr, no_of_eps):
     accuracy_results = [[] for _ in range(len(no_of_runs))]
     for run in no_of_runs:
         for n in no_of_succ_traces_arr:
-            accuracy = run_event_prediction(env, n, no_of_eps)
+            accuracy = run_clustering(env, n, no_of_eps)
             accuracy_results[run].append(accuracy)
     return accuracy_results
 
@@ -17,7 +17,7 @@ def vary_no_of_episodes(env, no_of_runs, no_of_eps_arr, no_of_succ_traces):
     accuracy_results = [[] for _ in range(len(no_of_runs))]
     for run in no_of_runs:
         for n in no_of_eps_arr:
-            accuracy = run_event_prediction(env, no_of_succ_traces, n)
+            accuracy = run_clustering(env, no_of_succ_traces, n)
             accuracy_results[run].append(accuracy)
     return accuracy_results
 
@@ -101,4 +101,4 @@ if __name__ == "__main__":
 
     # run_event_prediction(env_with_static_balls, num_succ_traces=2, num_episodes=10, encode_with_qbn=False)
 
-    user_playing_with_env(fixed_env_with_static_balls, no_of_runs=2, see_replay=False)
+    user_playing_with_env(fixed_env, no_of_runs=2, see_replay=True)

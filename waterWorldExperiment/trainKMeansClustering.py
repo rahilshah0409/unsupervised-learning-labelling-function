@@ -1,4 +1,5 @@
 import os
+import pickle
 import random
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -75,6 +76,14 @@ def extract_shortest_succ_traces(
     return extracted_ep_durations, extracted_state_seqs, extracted_events, extracted_actions
 
 
+def get_random_succ_traces(env, num_succ_traces, num_episodes):
+    episode_durations, states_traversed, episode_events, actions_per_episodes = run_agent(
+        env, num_episodes)
+
+    return extract_shortest_succ_traces(
+        episode_durations, states_traversed, episode_events, actions_per_episodes, num_succ_traces
+    )
+
 # Given a list of state sequences, encodes every state in every sequence with the QBN given
 def encode_state_seqs(qbn, state_seqs):
     encoded_seqs = []
@@ -95,24 +104,29 @@ def encode_state_seqs(qbn, state_seqs):
 
 
 # Reduce the dimensionality of the data into two dimensions. This will help for visualisation of the KMeans clustering
-def dataset_dim_reduction(states, use_tsne):
+def dim_reduction(states, use_tsne):
     principal_components = None
     if use_tsne:
-        tsne = TSNE(n_components=2)
-        principal_components = tsne.fit_transform(states)
+        tsne_obj = TSNE(n_components=2)
+        principal_components = tsne_obj.fit_transform(states)
     else:
-        pca2 = PCA(n_components=2)
-        principal_components = pca2.fit_transform(states)
+        pca_obj = PCA(n_components=2)
+        principal_components = pca_obj.fit_transform(states)
     return principal_components
 
 
 # Plots the KMeans clusters
-def plot_kmeans_clustering(df, labels, no_of_clusters):
+def visualise_training_clustering(labels, state_seq, no_of_clusters):
+    principal_components = dim_reduction(state_seq, use_tsne=False)
+    pca_df = pd.DataFrame(
+        data=principal_components,
+        columns=["PC1", "PC2"]
+    )
     for i in range(no_of_clusters):
-        filtered_df = df[labels == i]
+        filtered_df = pca_df[labels == i]
         plt.scatter(
-            filtered_df["Principal component 1"],
-            filtered_df["Principal component 2"],
+            filtered_df["PC1"],
+            filtered_df["PC2"],
             label=i,
         )
     plt.legend()
@@ -121,35 +135,31 @@ def plot_kmeans_clustering(df, labels, no_of_clusters):
 
 # Performs KMeans clustering on the state sequences and plots the resulting data
 def kmeans_clustering(state_seqs, no_of_clusters):
-    principal_components = dataset_dim_reduction(states=state_seqs, use_tsne=True)
-    pca_df = pd.DataFrame(
-        data=principal_components,
-        columns=["Principal component 1", "Principal component 2"],
-    )
+    conc_state_seqs = np.concatenate(state_seqs)
     kmeans = KMeans(n_clusters=no_of_clusters)
-    labels = kmeans.fit_predict(pca_df)
-    plot_kmeans_clustering(pca_df, labels, no_of_clusters)
-    return labels
+    kmeans_obj = kmeans.fit(conc_state_seqs)
+    visualise_training_clustering(kmeans_obj.labels_, conc_state_seqs, no_of_clusters)
+    return kmeans_obj
 
 
 # Given the cluster that each event is assigned to, extract an event label from them
 # TODO: Change this approach (currently naive)
-def extract_labels_from_clusters(cluster_labels):
-    event_labels = []
-    hardcoded_mapping = {"0": set(), "1": {"r"}, "2": {"b"}, "3": {"b", "r"}}
-    for i in range(len(cluster_labels)):
-        cluster_label_str = str(cluster_labels[i])
-        event_labels.append(hardcoded_mapping[cluster_label_str])
-    return event_labels
+# def extract_labels_from_clusters(cluster_labels):
+#     event_labels = []
+#     hardcoded_mapping = {"0": set(), "1": {"r"}, "2": {"b"}, "3": {"b", "r"}}
+#     for i in range(len(cluster_labels)):
+#         cluster_label_str = str(cluster_labels[i])
+#         event_labels.append(hardcoded_mapping[cluster_label_str])
+#     return event_labels
 
 
 # Extract labels for events with a clustering method
-def extract_events_from_clustering(state_seqs):
-    print("Clustering the state sequences with KMeans and PCA")
-    conc_state_seqs = np.concatenate(state_seqs)
-    no_of_events = 2
-    cluster_labels = kmeans_clustering(conc_state_seqs, 2 ** no_of_events)
-    return cluster_labels
+# def extract_events_from_clustering(state_seqs):
+#     print("Clustering the state sequences with KMeans and PCA")
+#     conc_state_seqs = np.concatenate(state_seqs)
+#     no_of_events = 2
+#     cluster_labels = kmeans_clustering(conc_state_seqs, 2 ** no_of_events)
+#     return cluster_labels
     # print("Extracting labels from the clusters")
     # event_labels = extract_labels_from_clusters(cluster_labels)
     # return event_labels
@@ -197,67 +207,61 @@ def extract_events_from_pairwise_comp(state_seqs):
 
 
 # Extracts event labels of the given state sequences, either by pairwise comparison or clustering
-def extract_events(state_seqs, pairwise_comp):
-    return (
-        extract_events_from_pairwise_comp(state_seqs)
-        if pairwise_comp
-        else extract_events_from_clustering(state_seqs)
-    )
+# def extract_events(state_seqs, pairwise_comp):
+#     return (
+#         extract_events_from_pairwise_comp(state_seqs)
+#         if pairwise_comp
+#         else extract_events_from_clustering(state_seqs)
+#     )
 
 
-def run_event_prediction(env, num_succ_traces, num_episodes, encode_with_qbn=True, use_pairwise_comp=False):
-    # Generate successful traces for the task
-    print("Agent running a random policy to get successful traces")
-    episode_durations, states_traversed, episode_events, actions_per_episodes = run_agent(
-        env, num_episodes)
-
-    # Get the shortest traces- they are the most relevant
-    print("Getting the {} shortest successful traces".format(num_succ_traces))
-    (
-        shortest_ep_durations,
-        relevant_state_seqs,
-        relevant_events,
-        relevant_actions
-    ) = extract_shortest_succ_traces(
-        episode_durations, states_traversed, episode_events, actions_per_episodes, num_succ_traces
-    )
+def run_clustering(env, no_of_events, num_succ_traces, num_episodes):
+    cluster_obj_dir = "./trainedClusterObjs"
+    cluster_obj_qbn_loc = cluster_obj_dir + "/kmeans_qbn.pkl"
+    cluster_obj_no_qbn_loc = cluster_obj_dir + "/kmeans_no_qbn.pkl"
     
-    print(relevant_state_seqs[0][0])
+    # Generate successful traces for the task
+    shortest_ep_durs, state_seqs, events, actions = get_random_succ_traces(env, num_succ_traces, num_episodes)
 
-    if encode_with_qbn:
-        trained_model_loc = "./trainedQBN/finalModel.pth"
+    trained_model_loc = "./trainedQBN/finalModel.pth"
 
-        # Load the QBN (trained through the program qbnTrainAndEval.py)
-        input_vec_dim = 52
-        quant_vector_dim = 100
-        training_batch_size = 32
-        learning_rate = 1e-4
-        weight_decay = 0
-        epochs = 300
-        training_set_size = 8192
-        qbn = QuantisedBottleneckNetwork(
-            input_vec_dim,
-            quant_vector_dim,
-            training_batch_size,
-            learning_rate,
-            weight_decay,
-            epochs,
-            training_set_size,
-        )
-        qbn.load_state_dict(torch.load(trained_model_loc))
+    # Load the QBN (trained through the program qbnTrainAndEval.py)
+    input_vec_dim = 52
+    quant_vector_dim = 100
+    training_batch_size = 32
+    learning_rate = 1e-4
+    weight_decay = 0
+    epochs = 300
+    training_set_size = 8192
+    qbn = QuantisedBottleneckNetwork(
+        input_vec_dim,
+        quant_vector_dim,
+        training_batch_size,
+        learning_rate,
+        weight_decay,
+        epochs,
+        training_set_size,
+    )
+    qbn.load_state_dict(torch.load(trained_model_loc))
 
-        # Encoded every state (tensor object) in every sequence with the QBN
-        print("Using a loaded QBN to encode states")
-        relevant_state_seqs = encode_state_seqs(qbn, relevant_state_seqs)
+    # Encoded every state (tensor object) in every sequence with the QBN
+    print("Using a loaded QBN to encode states")
+    encoded_state_seqs = encode_state_seqs(qbn, state_seqs)
 
-    # Alternatively, extract labels from latent vectors with k-means clustering (cluster labels)
-    event_labels = extract_events(state_seqs=relevant_state_seqs, pairwise_comp=use_pairwise_comp)
+    print("Performing kmeans clustering on the successful traces of states")
+    kmeans_obj_no_qbn = kmeans_clustering(state_seqs, 2 ** no_of_events)
+    kmeans_obj_qbn = kmeans_clustering(encoded_state_seqs, 2 ** no_of_events)
+    # labels = extract_events_from_clustering(relevant_state_seqs)
+    
+    print("Save trained KMeans objects in pickle objects")
+    pickle.dump(kmeans_obj_no_qbn, open(cluster_obj_no_qbn_loc, "wb"))
+    pickle.dump(kmeans_obj_qbn, open(cluster_obj_qbn_loc, "wb"))
 
-    conc_relevant_events = np.concatenate(relevant_events)
-    # tl.plot_events_pred_events_from_env_dist(event_labels, conc_relevant_events, shortest_ep_durations)
-    precision_scores, recall_scores = tl.compare_changes_in_events(event_labels, conc_relevant_events, shortest_ep_durations)
-    print(precision_scores)
-    print(recall_scores)
+    # conc_relevant_events = np.concatenate(relevant_events)
+    # # tl.plot_events_pred_events_from_env_dist(cluster_labels, conc_relevant_events, shortest_ep_durations)
+    # precision_scores, recall_scores = tl.compare_changes_in_events(cluster_labels, conc_relevant_events, shortest_ep_durations)
+    # print(precision_scores)
+    # print(recall_scores)
 
     # Perform evaluation of extracted labels
     # conc_relevant_events = np.concatenate(relevant_events)
@@ -275,4 +279,4 @@ if __name__ == "__main__":
         "gym_subgoal_automata:WaterWorldRedGreen-v0",
         params={"generation": "random", "environment_seed": 0},
     )
-    run_event_prediction(env=env, num_succ_traces=50, num_episodes=500)
+    run_clustering(env=env, no_of_events=2, num_succ_traces=50, num_episodes=500)
