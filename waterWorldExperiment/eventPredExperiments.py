@@ -55,6 +55,11 @@ def user_playing_with_env(env, no_of_runs, see_replay=True):
                 cluster_label_ix += 1
 
 if __name__ == "__main__":
+    simple_fixed_start_env = gym.make(
+        "gym_subgoal_automata:WaterWorldRed-v0",
+        params={"generation": "random", "random_restart": False, "environment_seed": 0}
+    )
+    
     normal_env = gym.make(
         "gym_subgoal_automata:WaterWorldRedGreen-v0",
         params={"generation": "random", "environment_seed": 0},
