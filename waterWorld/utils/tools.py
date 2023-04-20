@@ -210,23 +210,21 @@ def plot_events_pred_events_from_env_dist(events_pred, events_from_env, ep_durat
 # Visualises how cluster labels have been assigned to states in a trace vs the events that were actually observed in the same trace
 
 
-def visualise_cluster_labels_vs_events(cluster_labels_1, cluster_labels_2, event_labels, ep_dur):
+def visualise_cluster_labels_vs_events(cluster_labels_arr, subplot_titles, event_labels, ep_dur):
     event_labels = list(map(convert_obs_set_to_str, event_labels))
 
-    fig, (axs1, axs2, axs3) = plt.subplots(1, 3)
+    fig, axs = plt.subplots(len(cluster_labels_arr), 2)
     fig.suptitle(
-        "Cluster labels without QBN, with QBN and ground event labels")
+        "Cluster labels vs ground event labels")
 
     x_axis = range(ep_dur)
-    axs1.plot(x_axis, cluster_labels_1, 'o')
-    axs1.set(
-        xlabel="State index", ylabel="Cluster labels")
-    axs2.plot(x_axis, cluster_labels_2, 'o')
-    axs2.set(
-        xlabel="State index", ylabel="Cluster labels")
-    axs3.plot(x_axis, event_labels, 'o')
-    axs3.set(
-        xlabel="State index", ylabel="Event labels")
+    for i in range(len(cluster_labels_arr)):
+        axs[i, 0].plot(x_axis, cluster_labels_arr[i], 'o')
+        axs[i, 0].set(
+            xlabel="State index", ylabel="Cluster labels", title=subplot_titles[i])
+        axs[i, 1].plot(x_axis, event_labels, 'o')
+        axs[i, 1].set(
+            xlabel="State index", ylabel="Event labels")
 
     plt.show()
 
@@ -296,47 +294,37 @@ def compare_changes_in_events(events_pred, events_from_env, ep_durations):
     return precision_scores, recall_scores
 
 
-def compare_changes_in_cluster_ids_vs_events(cluster_labels_1, cluster_labels_2, event_labels, ep_dur):
+def compare_changes_in_cluster_ids_vs_events(cluster_labels_arr, event_labels, ep_dur):
     event_labels = list(map(convert_obs_set_to_str, event_labels))
-
+    last_cluster_labels = [labels[0] for labels in cluster_labels_arr]
     last_event_label = event_labels[0]
-    last_cluster_label_1 = cluster_labels_1[0]
-    last_cluster_label_2 = cluster_labels_2[0]
 
-    changes_in_clusters_1 = []
-    changes_in_clusters_2 = []
+    changes_in_clusters = [[] for _ in range(len(cluster_labels_arr))]
     changes_in_env_events = []
 
     for i in range(1, ep_dur):
-        curr_cluster_label_1 = cluster_labels_1[i]
-        curr_cluster_label_2 = cluster_labels_2[i]
+        curr_cluster_labels = [labels[i] for labels in cluster_labels_arr]
         curr_event_label = event_labels[i]
         if last_event_label != curr_event_label:
             changes_in_env_events.append(
                 (i, last_event_label, curr_event_label))
-        if last_cluster_label_1 != curr_cluster_label_1:
-            changes_in_clusters_1.append(
-                (i, last_cluster_label_1, curr_cluster_label_1))
-        if last_cluster_label_2 != curr_cluster_label_2:
-            changes_in_clusters_2.append(
-                (i, last_cluster_label_2, curr_cluster_label_2))
+        for i in range(len(cluster_labels_arr)):
+            last = last_cluster_labels[i]
+            curr = curr_cluster_labels[i]
+            if last != curr:
+                changes_in_clusters[i].append((i, last, curr))
         last_event_label = curr_event_label
-        last_cluster_label_1 = curr_cluster_label_1
-        last_cluster_label_2 = curr_cluster_label_2
+        last_cluster_labels = curr_cluster_labels
 
-    print("Changes in cluster labels 1")
-    print(changes_in_clusters_1)
-    print("Changes in cluster labels 2")
-    print(changes_in_clusters_2)
-    print("Changes in events from the environment")
-    print(changes_in_env_events)
+    precision_scores = []
+    recall_scores = []
+    for i in range(len(curr_cluster_labels)):     
+        precison, recall = precision_and_recall_calculator(
+            changes_in_clusters[i], changes_in_env_events)
+        precision_scores.append(precison)
+        recall_scores.append(recall)
 
-    precison_1, recall_1 = precision_and_recall_calculator(
-        changes_in_clusters_1, changes_in_env_events)
-    precison_2, recall_2 = precision_and_recall_calculator(
-        changes_in_clusters_2, changes_in_env_events)
-
-    return precison_1, recall_1, precison_2, recall_2
+    return precision_scores, recall_scores
 
 
 # Calculates the precision and recall of the changes in cluster labels and the changes in events taken from the environment

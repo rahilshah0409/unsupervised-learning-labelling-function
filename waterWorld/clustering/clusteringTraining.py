@@ -86,7 +86,7 @@ def get_random_succ_traces(env, num_succ_traces, num_episodes):
 
 def get_random_succ_trace(env):
     ep_durs, states, events, actions = get_random_succ_traces(env, 1, 1)
-    return ep_durs[0], states, events, actions
+    return ep_durs[0], states[0], events[0], actions[0]
 
 
 # Given a list of state sequences, encodes every state in every sequence with the QBN given
@@ -191,28 +191,25 @@ def extract_events_from_pairwise_comp(state_seqs):
     return event_labels
 
 
-def train_clustering(env, no_of_events, num_succ_traces, num_episodes):
-    cluster_obj_dir = "./trainedClusterObjs"
-    cluster_obj_qbn_loc = cluster_obj_dir + "/kmeans_qbn.pkl"
-    cluster_obj_no_qbn_loc = cluster_obj_dir + "/kmeans_no_qbn.pkl"
+def train_clustering(state_seqs, no_of_clusters, encode_states=False):
+    # cluster_obj_dir = "./trainedClusterObjs"
+    # cluster_obj_qbn_loc = cluster_obj_dir + "/kmeans_qbn.pkl"
+    # cluster_obj_no_qbn_loc = cluster_obj_dir + "/kmeans_no_qbn.pkl"
+
+    if encode_states: 
+        qbn = tl.loadSavedQBN("./trainedQBN/finalModel.pth")
+
+        # Encode every state (tensor object) in every sequence with the QBN
+        print("Using a loaded QBN to encode states")
+        state_seqs = encode_state_seqs(qbn, state_seqs)
     
-    # Generate successful traces for the task
-    shortest_ep_durs, state_seqs, events, actions = get_random_succ_traces(env, num_succ_traces, num_episodes)
-
-    qbn = tl.loadSavedQBN("./trainedQBN/finalModel.pth")
-
-    # Encoded every state (tensor object) in every sequence with the QBN
-    print("Using a loaded QBN to encode states")
-    encoded_state_seqs = encode_state_seqs(qbn, state_seqs)
-
-    print("Performing kmeans clustering on the successful traces of states")
-    kmeans_obj_no_qbn = kmeans_clustering(state_seqs, 2 ** no_of_events, "KMeans clustering without encoding")
-    kmeans_obj_qbn = kmeans_clustering(encoded_state_seqs, 2 ** no_of_events, "KMeans clustering with encoding")
-    # labels = extract_events_from_clustering(relevant_state_seqs)
+    plot_title = "KMeans clustering with encoding" if encode_states else "KMeans clustering without encoding"
+    kmeans_obj = kmeans_clustering(state_seqs, no_of_clusters, plot_title)  
     
-    print("Save trained KMeans objects in pickle objects")
-    pickle.dump(kmeans_obj_no_qbn, open(cluster_obj_no_qbn_loc, "wb"))
-    pickle.dump(kmeans_obj_qbn, open(cluster_obj_qbn_loc, "wb"))
+    return kmeans_obj
+    # print("Save trained KMeans objects in pickle objects")
+    # pickle.dump(kmeans_obj, open(cluster_obj_no_qbn_loc, "wb"))
+    # pickle.dump(kmeans_obj_qbn, open(cluster_obj_qbn_loc, "wb"))
 
 
 if __name__ == "__main__":
