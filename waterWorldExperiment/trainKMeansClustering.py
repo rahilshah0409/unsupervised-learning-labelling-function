@@ -84,6 +84,12 @@ def get_random_succ_traces(env, num_succ_traces, num_episodes):
         episode_durations, states_traversed, episode_events, actions_per_episodes, num_succ_traces
     )
 
+
+def get_random_succ_trace(env):
+    ep_durs, states, events, actions = get_random_succ_traces(env, 1, 1)
+    return ep_durs[0], states, events, actions
+
+
 # Given a list of state sequences, encodes every state in every sequence with the QBN given
 def encode_state_seqs(qbn, state_seqs):
     encoded_seqs = []
@@ -116,7 +122,8 @@ def dim_reduction(states, use_tsne):
 
 
 # Plots the KMeans clusters
-def visualise_training_clustering(labels, state_seq, no_of_clusters):
+def visualise_training_clustering(labels, state_seq, no_of_clusters, plot_title):
+    print("Visualising the clustering that is done when training the cluster objects")
     principal_components = dim_reduction(state_seq, use_tsne=False)
     pca_df = pd.DataFrame(
         data=principal_components,
@@ -129,16 +136,18 @@ def visualise_training_clustering(labels, state_seq, no_of_clusters):
             filtered_df["PC2"],
             label=i,
         )
+    plt.title(plot_title)
     plt.legend()
     plt.show()
 
 
 # Performs KMeans clustering on the state sequences and plots the resulting data
-def kmeans_clustering(state_seqs, no_of_clusters):
+def kmeans_clustering(state_seqs, no_of_clusters, plot_title):
     conc_state_seqs = np.concatenate(state_seqs)
     kmeans = KMeans(n_clusters=no_of_clusters)
+    print("Fitting the states with the KMeans object")
     kmeans_obj = kmeans.fit(conc_state_seqs)
-    visualise_training_clustering(kmeans_obj.labels_, conc_state_seqs, no_of_clusters)
+    visualise_training_clustering(kmeans_obj.labels_, conc_state_seqs, no_of_clusters, plot_title)
     return kmeans_obj
 
 
@@ -223,39 +232,20 @@ def run_clustering(env, no_of_events, num_succ_traces, num_episodes):
     # Generate successful traces for the task
     shortest_ep_durs, state_seqs, events, actions = get_random_succ_traces(env, num_succ_traces, num_episodes)
 
-    trained_model_loc = "./trainedQBN/finalModel.pth"
-
-    # Load the QBN (trained through the program qbnTrainAndEval.py)
-    input_vec_dim = 52
-    quant_vector_dim = 100
-    training_batch_size = 32
-    learning_rate = 1e-4
-    weight_decay = 0
-    epochs = 300
-    training_set_size = 8192
-    qbn = QuantisedBottleneckNetwork(
-        input_vec_dim,
-        quant_vector_dim,
-        training_batch_size,
-        learning_rate,
-        weight_decay,
-        epochs,
-        training_set_size,
-    )
-    qbn.load_state_dict(torch.load(trained_model_loc))
+    qbn = tl.loadSavedQBN("./trainedQBN/finalModel.pth")
 
     # Encoded every state (tensor object) in every sequence with the QBN
     print("Using a loaded QBN to encode states")
     encoded_state_seqs = encode_state_seqs(qbn, state_seqs)
 
     print("Performing kmeans clustering on the successful traces of states")
-    kmeans_obj_no_qbn = kmeans_clustering(state_seqs, 2 ** no_of_events)
-    kmeans_obj_qbn = kmeans_clustering(encoded_state_seqs, 2 ** no_of_events)
+    kmeans_obj_no_qbn = kmeans_clustering(state_seqs, 2 ** no_of_events, "KMeans clustering without encoding")
+    kmeans_obj_qbn = kmeans_clustering(encoded_state_seqs, 2 ** no_of_events, "KMeans clustering with encoding")
     # labels = extract_events_from_clustering(relevant_state_seqs)
     
     print("Save trained KMeans objects in pickle objects")
-    pickle.dump(kmeans_obj_no_qbn, open(cluster_obj_no_qbn_loc, "wb"))
-    pickle.dump(kmeans_obj_qbn, open(cluster_obj_qbn_loc, "wb"))
+    # pickle.dump(kmeans_obj_no_qbn, open(cluster_obj_no_qbn_loc, "wb"))
+    # pickle.dump(kmeans_obj_qbn, open(cluster_obj_qbn_loc, "wb"))
 
     # conc_relevant_events = np.concatenate(relevant_events)
     # # tl.plot_events_pred_events_from_env_dist(cluster_labels, conc_relevant_events, shortest_ep_durations)

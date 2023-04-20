@@ -10,6 +10,8 @@ import torch.optim as optim
 from torch.autograd import Variable
 import torch.nn.utils as utils
 
+from qbn import QuantisedBottleneckNetwork
+
 # Generates the dataset that is used for training the QBN for the feature vectors by randomly initialising the environment a given number of times
 
 
@@ -205,6 +207,30 @@ def plot_events_pred_events_from_env_dist(events_pred, events_from_env, ep_durat
 
     plt.show()
 
+# Visualises how cluster labels have been assigned to states in a trace vs the events that were actually observed in the same trace
+
+
+def visualise_cluster_labels_vs_events(cluster_labels_1, cluster_labels_2, event_labels, ep_dur):
+    event_labels = list(map(convert_obs_set_to_str, event_labels))
+
+    fig, (axs1, axs2, axs3) = plt.subplots(1, 3)
+    fig.suptitle(
+        "Cluster labels without QBN, with QBN and ground event labels")
+
+    x_axis = range(ep_dur)
+    axs1.plot(x_axis, cluster_labels_1, 'o')
+    axs1.set(
+        xlabel="State index", ylabel="Cluster labels")
+    axs2.plot(x_axis, cluster_labels_2, 'o')
+    axs2.set(
+        xlabel="State index", ylabel="Cluster labels")
+    axs3.plot(x_axis, event_labels, 'o')
+    axs3.set(
+        xlabel="State index", ylabel="Event labels")
+
+    plt.show()
+
+
 # Helper method that converts the observation set into a string
 
 
@@ -239,9 +265,11 @@ def compare_changes_in_events(events_pred, events_from_env, ep_durations):
         curr_cluster_label = events_pred[label_index]
         curr_event_from_env = events_from_env[label_index]
         if last_event_from_env != curr_event_from_env:
-            changes_in_env_events.append((state_index_in_trace, last_event_from_env, curr_event_from_env))
+            changes_in_env_events.append(
+                (state_index_in_trace, last_event_from_env, curr_event_from_env))
         if last_cluster_label != curr_cluster_label:
-            changes_in_clusters.append((state_index_in_trace, last_cluster_label, curr_cluster_label))
+            changes_in_clusters.append(
+                (state_index_in_trace, last_cluster_label, curr_cluster_label))
         state_index_in_trace += 1
         label_index += 1
         last_event_from_env = curr_event_from_env
@@ -252,7 +280,8 @@ def compare_changes_in_events(events_pred, events_from_env, ep_durations):
             print(changes_in_clusters)
             print("Changes in events from the environment")
             print(changes_in_env_events)
-            precison, recall = precision_and_recall_calculator(changes_in_clusters, changes_in_env_events)
+            precison, recall = precision_and_recall_calculator(
+                changes_in_clusters, changes_in_env_events)
             precision_scores.append(precison)
             recall_scores.append(recall)
 
@@ -266,6 +295,50 @@ def compare_changes_in_events(events_pred, events_from_env, ep_durations):
 
     return precision_scores, recall_scores
 
+
+def compare_changes_in_cluster_ids_vs_events(cluster_labels_1, cluster_labels_2, event_labels, ep_dur):
+    event_labels = list(map(convert_obs_set_to_str, event_labels))
+
+    last_event_label = event_labels[0]
+    last_cluster_label_1 = cluster_labels_1[0]
+    last_cluster_label_2 = cluster_labels_2[0]
+
+    changes_in_clusters_1 = []
+    changes_in_clusters_2 = []
+    changes_in_env_events = []
+
+    for i in range(1, ep_dur):
+        curr_cluster_label_1 = cluster_labels_1[i]
+        curr_cluster_label_2 = cluster_labels_2[i]
+        curr_event_label = event_labels[i]
+        if last_event_label != curr_event_label:
+            changes_in_env_events.append(
+                (i, last_event_label, curr_event_label))
+        if last_cluster_label_1 != curr_cluster_label_1:
+            changes_in_clusters_1.append(
+                (i, last_cluster_label_1, curr_cluster_label_1))
+        if last_cluster_label_2 != curr_cluster_label_2:
+            changes_in_clusters_2.append(
+                (i, last_cluster_label_2, curr_cluster_label_2))
+        last_event_label = curr_event_label
+        last_cluster_label_1 = curr_cluster_label_1
+        last_cluster_label_2 = curr_cluster_label_2
+
+    print("Changes in cluster labels 1")
+    print(changes_in_clusters_1)
+    print("Changes in cluster labels 2")
+    print(changes_in_clusters_2)
+    print("Changes in events from the environment")
+    print(changes_in_env_events)
+
+    precison_1, recall_1 = precision_and_recall_calculator(
+        changes_in_clusters_1, changes_in_env_events)
+    precison_2, recall_2 = precision_and_recall_calculator(
+        changes_in_clusters_2, changes_in_env_events)
+
+    return precison_1, recall_1, precison_2, recall_2
+
+
 # Calculates the precision and recall of the changes in cluster labels and the changes in events taken from the environment
 
 
@@ -276,10 +349,14 @@ def precision_and_recall_calculator(changes_in_clusters, changes_in_env_events):
     env_e_indices = []
     if changes_in_env_events != []:
         env_e_indices, _, _ = zip(*changes_in_env_events)
-    precise_changes = list(filter(lambda change: change[0] in env_e_indices, changes_in_clusters))
-    precision = 0 if len(changes_in_clusters) == 0 else len(precise_changes) / len(changes_in_clusters)
-    recall_changes = list(filter(lambda change: change[0] in cluster_indices, changes_in_env_events))
-    recall = 0 if len(env_e_indices) == 0 else len(recall_changes) / len(env_e_indices)
+    precise_changes = list(
+        filter(lambda change: change[0] in env_e_indices, changes_in_clusters))
+    precision = 0 if len(changes_in_clusters) == 0 else len(
+        precise_changes) / len(changes_in_clusters)
+    recall_changes = list(
+        filter(lambda change: change[0] in cluster_indices, changes_in_env_events))
+    recall = 0 if len(env_e_indices) == 0 else len(
+        recall_changes) / len(env_e_indices)
     return precision, recall
 
 # Plots how many states are similar to a given state in a sequence
@@ -290,10 +367,33 @@ def plot_sim_states_freq(sim_states_arr):
     fig.suptitle("Distribution of similar states for each successful trace")
 
     for i in range(len(sim_states_arr)):
-        axs[i].set(xlabel="State indices in trace {}".format(i), ylabel="Number of states similar to state at index i")
+        axs[i].set(xlabel="State indices in trace {}".format(
+            i), ylabel="Number of states similar to state at index i")
         yaxis = []
         for j in range(len(sim_states_arr[i])):
             yaxis.append(len(sim_states_arr[i][j]))
         axs[i].plot(range(len(sim_states_arr[i])), yaxis)
-    
+
     plt.show()
+
+
+def loadSavedQBN(trained_model_loc):
+    # Load the QBN (trained through the program qbnTrainAndEval.py)
+    input_vec_dim = 52
+    quant_vector_dim = 100
+    training_batch_size = 32
+    learning_rate = 1e-4
+    weight_decay = 0
+    epochs = 300
+    training_set_size = 8192
+    qbn = QuantisedBottleneckNetwork(
+        input_vec_dim,
+        quant_vector_dim,
+        training_batch_size,
+        learning_rate,
+        weight_decay,
+        epochs,
+        training_set_size,
+    )
+    qbn.load_state_dict(torch.load(trained_model_loc))
+    return qbn

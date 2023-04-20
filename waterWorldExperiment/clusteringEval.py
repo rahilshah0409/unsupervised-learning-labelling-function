@@ -2,11 +2,11 @@ import pickle
 import time
 import gym
 import numpy as np
-import waterWorldExperiment.tools as tl
-from waterWorldExperiment.trainKMeansClustering import run_clustering, get_random_succ_traces
+import tools as tl
+from trainKMeansClustering import get_random_succ_trace, encode_state_seqs
 
 def user_playing_with_env(env, kmeans_obj, see_replay=True):
-    actions, states, times = env.play()
+    actions, states, _, times = env.play()
 
     cluster_labels = kmeans_obj.predict(states)
   
@@ -30,6 +30,17 @@ def user_playing_with_env(env, kmeans_obj, see_replay=True):
             time.sleep(time_to_sleep)
             cluster_label_ix += 1
             
+
+def get_test_trace(env, random_gen=True):
+    ep_dur = 0
+    states = []
+    events = []
+    if random_gen:
+        ep_dur, states, events, _ = get_random_succ_trace(env)
+    else:
+        _, states, events, _ = env.play()
+
+    return ep_dur, states, events
 
 if __name__ == "__main__":
     kmeans_obj_qbn = pickle.load(open("./trainedClusterObjs/kmeans_qbn.pkl", "rb"))
@@ -61,8 +72,19 @@ if __name__ == "__main__":
     )
     
     # user_playing_with_env(fixed_start_env, kmeans_obj_qbn, see_replay=True)
-    ep_durs, state_seqs, events, actions = get_random_succ_traces(normal_env, 1, 1)
+    ep_dur, state_seqs, events = get_test_trace(normal_env)
+    qbn = tl.loadSavedQBN("./trainedQBN/finalModel.pth")
+    encoded_state_seqs = encode_state_seqs(qbn, state_seqs)
+
     conc_state_seqs = np.concatenate(state_seqs)
-    cluster_labels = kmeans_obj_qbn.predict(conc_state_seqs)
+    cluster_labels_no_qbn = kmeans_obj_no_qbn.predict(conc_state_seqs)
+    conc_encoded_state_seqs = np.concatenate(encoded_state_seqs)
+    cluster_labels_qbn = kmeans_obj_qbn.predict(conc_encoded_state_seqs)
+
     conc_events = np.concatenate(events)
-    tl.plot_events_pred_events_from_env_dist(cluster_labels, conc_events, ep_durs)
+    tl.visualise_cluster_labels_vs_events(cluster_labels_no_qbn, cluster_labels_qbn, conc_events, ep_dur)
+
+    p_no_qbn, r_no_qbn, p_qbn, r_qbn = tl.compare_changes_in_cluster_ids_vs_events(cluster_labels_no_qbn, cluster_labels_qbn, conc_events, ep_dur)
+
+    print("Scores without using the QBN. Precision: {}. Recall: {}".format(p_no_qbn, r_no_qbn))
+    print("Scores when QBN is used. Precision: {}. Recall: {}".format(p_qbn, r_qbn))
