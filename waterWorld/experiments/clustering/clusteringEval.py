@@ -53,6 +53,8 @@ def evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, event_
 
 # Try out different forms of clustering. Not implemented yet
 
+# Varying number of clusters that we aim to extract and how we extract event labels given this. Not implemented yet
+
 # See if encoding the states with an autoencoder improves association between cluster labels and event labels
 def affect_of_autoencoder(env, num_succ_traces, num_eps):
     ep_dur, states, events = get_test_trace(env, random_gen=True)
