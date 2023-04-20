@@ -2,8 +2,8 @@ import pickle
 import time
 import gym
 import numpy as np
-import tools as tl
-from trainKMeansClustering import get_random_succ_trace, encode_state_seqs
+import waterWorld.utils.tools as tl
+from waterWorld.clustering.clusteringTraining import get_random_succ_trace, encode_state_seqs
 
 def user_playing_with_env(env, kmeans_obj, see_replay=True):
     actions, states, _, times = env.play()

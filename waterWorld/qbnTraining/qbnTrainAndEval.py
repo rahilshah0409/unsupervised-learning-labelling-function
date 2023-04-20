@@ -2,9 +2,9 @@
 
 import math
 from sklearn.model_selection import RandomizedSearchCV
-from qbn import QuantisedBottleneckNetwork
+from waterWorld.qbnTraining.qbn import QuantisedBottleneckNetwork
 import gym
-import tools as tl
+import waterWorld.utils.tools as tl
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.utils as utils

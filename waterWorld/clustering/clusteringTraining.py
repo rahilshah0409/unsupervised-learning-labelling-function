@@ -10,8 +10,7 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-import tools as tl
-from qbn import QuantisedBottleneckNetwork
+import waterWorld.utils.tools as tl
 
 
 # Defines a policy for an agent to choose actions at each timestep. Initially random
@@ -151,29 +150,6 @@ def kmeans_clustering(state_seqs, no_of_clusters, plot_title):
     return kmeans_obj
 
 
-# Given the cluster that each event is assigned to, extract an event label from them
-# TODO: Change this approach (currently naive)
-# def extract_labels_from_clusters(cluster_labels):
-#     event_labels = []
-#     hardcoded_mapping = {"0": set(), "1": {"r"}, "2": {"b"}, "3": {"b", "r"}}
-#     for i in range(len(cluster_labels)):
-#         cluster_label_str = str(cluster_labels[i])
-#         event_labels.append(hardcoded_mapping[cluster_label_str])
-#     return event_labels
-
-
-# Extract labels for events with a clustering method
-# def extract_events_from_clustering(state_seqs):
-#     print("Clustering the state sequences with KMeans and PCA")
-#     conc_state_seqs = np.concatenate(state_seqs)
-#     no_of_events = 2
-#     cluster_labels = kmeans_clustering(conc_state_seqs, 2 ** no_of_events)
-#     return cluster_labels
-    # print("Extracting labels from the clusters")
-    # event_labels = extract_labels_from_clusters(cluster_labels)
-    # return event_labels
-
-
 # Calculates the cosine similarity score between two vectors and records the indices of states that are similar enough
 def extract_sim_states(state_seqs, sim_threshold):
     similar_states_indices = [
@@ -215,16 +191,7 @@ def extract_events_from_pairwise_comp(state_seqs):
     return event_labels
 
 
-# Extracts event labels of the given state sequences, either by pairwise comparison or clustering
-# def extract_events(state_seqs, pairwise_comp):
-#     return (
-#         extract_events_from_pairwise_comp(state_seqs)
-#         if pairwise_comp
-#         else extract_events_from_clustering(state_seqs)
-#     )
-
-
-def run_clustering(env, no_of_events, num_succ_traces, num_episodes):
+def train_clustering(env, no_of_events, num_succ_traces, num_episodes):
     cluster_obj_dir = "./trainedClusterObjs"
     cluster_obj_qbn_loc = cluster_obj_dir + "/kmeans_qbn.pkl"
     cluster_obj_no_qbn_loc = cluster_obj_dir + "/kmeans_no_qbn.pkl"
@@ -244,24 +211,8 @@ def run_clustering(env, no_of_events, num_succ_traces, num_episodes):
     # labels = extract_events_from_clustering(relevant_state_seqs)
     
     print("Save trained KMeans objects in pickle objects")
-    # pickle.dump(kmeans_obj_no_qbn, open(cluster_obj_no_qbn_loc, "wb"))
-    # pickle.dump(kmeans_obj_qbn, open(cluster_obj_qbn_loc, "wb"))
-
-    # conc_relevant_events = np.concatenate(relevant_events)
-    # # tl.plot_events_pred_events_from_env_dist(cluster_labels, conc_relevant_events, shortest_ep_durations)
-    # precision_scores, recall_scores = tl.compare_changes_in_events(cluster_labels, conc_relevant_events, shortest_ep_durations)
-    # print(precision_scores)
-    # print(recall_scores)
-
-    # Perform evaluation of extracted labels
-    # conc_relevant_events = np.concatenate(relevant_events)
-    # correct_labels = [
-    #     l1 for l1, l2 in zip(event_labels, conc_relevant_events) if l1 == l2
-    # ]
-    # accuracy = len(correct_labels) / len(conc_relevant_events)
-    # print("Accuracy of predicted mapping of event labels is {}".format(accuracy))
-
-    # return accuracy
+    pickle.dump(kmeans_obj_no_qbn, open(cluster_obj_no_qbn_loc, "wb"))
+    pickle.dump(kmeans_obj_qbn, open(cluster_obj_qbn_loc, "wb"))
 
 
 if __name__ == "__main__":
@@ -269,4 +220,4 @@ if __name__ == "__main__":
         "gym_subgoal_automata:WaterWorldRedGreen-v0",
         params={"generation": "random", "environment_seed": 0},
     )
-    run_clustering(env=env, no_of_events=2, num_succ_traces=50, num_episodes=500)
+    train_clustering(env=env, no_of_events=2, num_succ_traces=50, num_episodes=500)

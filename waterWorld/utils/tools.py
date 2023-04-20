@@ -10,7 +10,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 import torch.nn.utils as utils
 
-from qbn import QuantisedBottleneckNetwork
+from waterWorld.qbnTraining.qbn import QuantisedBottleneckNetwork
 
 # Generates the dataset that is used for training the QBN for the feature vectors by randomly initialising the environment a given number of times
 
