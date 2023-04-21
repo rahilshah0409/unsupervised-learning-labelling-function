@@ -11,6 +11,7 @@ def user_playing_with_env(env, kmeans_obj, see_replay=True):
     actions, states, _, times = env.play()
 
     cluster_labels = kmeans_obj.predict(states)
+    print(states[-4])
   
     if see_replay:
         cluster_label_ix = 0

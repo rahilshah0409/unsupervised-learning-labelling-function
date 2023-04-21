@@ -1,5 +1,6 @@
 import torch.nn as nn
-from quantisationMethods import BinarySigmoid
+from waterWorld.qbnTraining.quantisationMethods import BinarySigmoid
+
 
 
 class QuantisedBottleneckNetwork(nn.Module):

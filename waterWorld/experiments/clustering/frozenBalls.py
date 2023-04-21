@@ -1,8 +1,8 @@
 import gym
 import sys
 sys.path.insert(1, "/home/rahilshah/Documents/Year4/FYP/AEExperiment/AEExperiment")
-from waterWorld.clustering.clusteringTraining import run_agent
-from waterWorld.experiments.clustering.clusteringEval import affect_of_autoencoder, vary_no_of_eps, vary_no_of_succ_traces
+from waterWorld.clustering.clusteringTraining import get_random_succ_traces, run_agent, train_clustering
+from waterWorld.experiments.clustering.clusteringEval import affect_of_autoencoder, get_test_trace, user_playing_with_env, vary_no_of_eps, vary_no_of_succ_traces
 
 if __name__ == "__main__":
     use_velocities = False
@@ -13,6 +13,11 @@ if __name__ == "__main__":
 
     fixed_start_env_with_static_balls = gym.make(
         "gym_subgoal_automata:WaterWorldRedGreen-v0",
+        params={"generation": "random", "use_velocities": use_velocities, "environment_seed": 0, "random_restart": False},
+    )
+
+    fixed_start_red_env_with_static_balls = gym.make(
+        "gym_subgoal_automata:WaterWorldRed-v0",
         params={"generation": "random", "use_velocities": use_velocities, "environment_seed": 0, "random_restart": False},
     )
 
@@ -27,4 +32,4 @@ if __name__ == "__main__":
 
     num_succ_traces = 50
     num_eps = 500
-    affect_of_autoencoder(env_with_static_balls, num_succ_traces, num_eps, use_velocities)
+    affect_of_autoencoder(fixed_start_env_with_static_balls, num_succ_traces, num_eps, use_velocities)
