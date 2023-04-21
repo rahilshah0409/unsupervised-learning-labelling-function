@@ -1,5 +1,6 @@
 import os
 import pickle
+import torch.nn as nn
 import random
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -10,7 +11,31 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+from waterWorld.qbnTraining.quantisationMethods import BinarySigmoid
 import waterWorld.utils.tools as tl
+
+
+# Converts string ID into correct filename where the relevant autoencoder can be loaded
+def find_qbn_filename(activation, use_velocities):
+    qbn_prefix = ""
+    if activation == "binarySigmoid":
+        qbn_prefix = "binSig"
+    elif activation == "tanh":
+        qbn_prefix = "tanh"
+    elif activation == "sigmoid":
+        qbn_prefix = "sig"
+    qbn_suffix = "Normal.pth" if use_velocities else "Static.pth"
+    qbn_filename = qbn_prefix + qbn_suffix
+    return qbn_filename
+
+
+def convert_activation(str):
+    if str == "binarySigmoid":
+        return BinarySigmoid()
+    elif str == "tanh":
+        return nn.Tanh()
+    elif str == "sigmoid":
+        return nn.Sigmoid()
 
 
 # Defines a policy for an agent to choose actions at each timestep. Initially random
@@ -188,15 +213,17 @@ def extract_events_from_pairwise_comp(state_seqs):
     return event_labels
 
 
-def train_clustering(state_seqs, no_of_clusters, use_velocities, encode_states=False):
+def train_clustering(state_seqs, no_of_clusters, use_velocities, activation, encode_states=False):
     # cluster_obj_dir = "./trainedClusterObjs"
     # cluster_obj_qbn_loc = cluster_obj_dir + "/kmeans_qbn.pkl"
     # cluster_obj_no_qbn_loc = cluster_obj_dir + "/kmeans_no_qbn.pkl"
 
     qbn = None
     if encode_states: 
-        qbn_filename = "finalModelNormal.pth" if use_velocities else "finalModelStatic.pth"
-        qbn = tl.loadSavedQBN("../../qbnTraining/trainedQBN/" + qbn_filename)
+        qbn_filename = find_qbn_filename(activation, use_velocities)
+        activation_class = convert_activation(activation)
+        vec_dim = 52 if use_velocities else 28
+        qbn = tl.loadSavedQBN("../../qbnTraining/trainedQBN/" + qbn_filename, vec_dim, activation_class)
 
         # Encode every state (tensor object) in every sequence with the QBN
         print("Using a loaded QBN to encode states")

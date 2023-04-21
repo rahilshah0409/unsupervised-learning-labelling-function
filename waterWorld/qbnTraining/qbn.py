@@ -1,4 +1,6 @@
 import torch.nn as nn
+import sys
+sys.path.insert(1, "/home/rahilshah/Documents/Year4/FYP/AEExperiment/AEExperiment")
 from waterWorld.qbnTraining.quantisationMethods import BinarySigmoid
 
 
@@ -9,9 +11,11 @@ class QuantisedBottleneckNetwork(nn.Module):
     # Hard coded the values based on my understanding of the code and the input vectors we expect
     # Using binary quantisation
     # Introduced hyperparameter of the dimension of the quantised vector, not sure if I want to introduce it here
-    def __init__(self, input_vec_dim, quant_vector_dim=6, batch_size=32, learning_rate=0.005, weight_decay=0.01, epochs=100, training_set_size=2000):
+    def __init__(self, input_vec_dim, quant_vector_dim=6, batch_size=32, learning_rate=0.005, weight_decay=0.01, epochs=100, encoder_activation=BinarySigmoid(), training_set_size=2000):
         super(QuantisedBottleneckNetwork, self).__init__()
         self.input_vec_dim = input_vec_dim
+        print("Input vec dim")
+        print(self.input_vec_dim)
         self.quant_vector_dim = quant_vector_dim
         self.batch_size = batch_size
         self.learning_rate = learning_rate
@@ -25,13 +29,12 @@ class QuantisedBottleneckNetwork(nn.Module):
                                      # nn.Linear(f1, f2),
                                      # nn.Tanh(),
                                      nn.Linear(f1, self.quant_vector_dim),
-                                     BinarySigmoid())
+                                     encoder_activation)
         self.decoder = nn.Sequential(nn.Linear(self.quant_vector_dim, f1),
                                      nn.Tanh(),
                                      # nn.Linear(f2, f1),
                                      # nn.Tanh(),
-                                     nn.Linear(f1, self.input_vec_dim),
-                                     nn.ReLU6())
+                                     nn.Linear(f1, self.input_vec_dim))
 
     # Method that mimics a forward pass in the QBN
     def forward(self, input):

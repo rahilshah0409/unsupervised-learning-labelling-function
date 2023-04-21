@@ -42,6 +42,7 @@ def get_test_trace(env, random_gen=True):
         ep_dur, states, events, _ = get_random_succ_trace(env)
     else:
         _, states, events, _ = env.play()
+        ep_dur = len(states)
 
     return ep_dur, states, events
 
@@ -78,21 +79,26 @@ def vary_no_of_clusters(env, num_succ_traces, num_eps, num_clusters_arr):
     evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, events, ep_dur)
 
 # See if encoding the states with an autoencoder improves association between cluster labels and event labels
-def affect_of_autoencoder(env, num_succ_traces, num_eps, use_velocities):
-    ep_dur, states, events = get_test_trace(env, random_gen=True)
+def affect_of_autoencoder(env, num_succ_traces, num_eps, use_velocities, activations):
+    ep_dur, states, events = get_test_trace(env, random_gen=False)
+    print("Episode duration is: {}".format(ep_dur))
     cluster_labels_arr = []
     _, state_seqs, _, _ = get_random_succ_traces(env, num_succ_traces, num_eps)
 
-    kmeans_obj_no_qbn, _ = train_clustering(state_seqs, 4, encode_states=False)
+    kmeans_obj_no_qbn, _ = train_clustering(state_seqs, 4, use_velocities, None, encode_states=False)
     cluster_labels_no_qbn = kmeans_obj_no_qbn.predict(states)
+    print(len(cluster_labels_no_qbn))
     cluster_labels_arr.append(cluster_labels_no_qbn)
 
-    kmeans_obj_qbn, qbn = train_clustering(state_seqs, 4, use_velocities, encode_states=True)
-    encoded_states = encode_state_seq(qbn, states)
-    cluster_labels_qbn = kmeans_obj_qbn.predict(encoded_states)
-    cluster_labels_arr.append(cluster_labels_qbn)
+    for i in range(len(activations)):
+        activation = activations[i]
+        kmeans_obj_qbn, qbn = train_clustering(state_seqs, 4, use_velocities, activation, encode_states=True)
+        encoded_states = encode_state_seq(qbn, states)
+        cluster_labels_qbn = kmeans_obj_qbn.predict(encoded_states)
+        print(len(cluster_labels_qbn))
+        cluster_labels_arr.append(cluster_labels_qbn)
 
-    subplot_titles = ["Without QBN", "With QBN"]
+    subplot_titles = ["Without QBN", "Binary sigmoid", "Tanh", "Sigmoid"]
     evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, events, ep_dur)
 
 # Affect of different number of successful traces

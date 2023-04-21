@@ -5,6 +5,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from qbn import QuantisedBottleneckNetwork
 import gym
 import sys
+from waterWorld.qbnTraining.quantisationMethods import BinarySigmoid
 sys.path.insert(1, "/home/rahilshah/Documents/Year4/FYP/AEExperiment/AEExperiment")
 import waterWorld.utils.tools as tl
 import torch.optim as optim
@@ -123,7 +124,7 @@ def eval_qbn(model, test_data, batch_size):
     return loss_total / total_test_batches
 
 
-def run_qbn_training(env, input_vec_dim, trained_model_loc):
+def run_qbn_training(input_vec_dim, encoder_activation, train_data, test_data, trained_model_loc):
     # Hyperparameters
     quant_vector_dim = 100
     training_batch_size = 32
@@ -134,19 +135,11 @@ def run_qbn_training(env, input_vec_dim, trained_model_loc):
     training_set_size = 8192
     testing_set_size = 2048
 
-    # Generate training dataset
-    print("Beginning to generate training and testing data")
-    obs_training_data = tl.generate_train_data_rand_init(
-        env=env, dataset_size=training_set_size)
-    obs_testing_data = tl.generate_train_data_rand_init(
-        env=env, dataset_size=testing_set_size)
-    print("Finished generating training and testing data")
-
     # Create and train the QBN
     qbn = QuantisedBottleneckNetwork(input_vec_dim, quant_vector_dim, training_batch_size,
-                                     learning_rate, weight_decay, epochs, training_set_size)
+                                     learning_rate, weight_decay, epochs, encoder_activation, training_set_size)
     print("Training the QBN now")
-    qbn = train_loop(qbn, obs_training_data, obs_testing_data, test_batch_size)
+    qbn = train_loop(qbn, train_data, test_data, test_batch_size)
     print("Finished training the QBN")
 
     torch.save(qbn.state_dict(), trained_model_loc)
@@ -159,17 +152,39 @@ if __name__ == '__main__':
                    params={"generation": "random", "environment_seed": 0})
     static_ball_env = gym.make("gym_subgoal_automata:WaterWorldRedGreen-v0",
                    params={"generation": "random", "environment_seed": 0, "use_velocities": False})
-    trained_model_loc_normal = "./trainedQBN/finalModelNormal.pth"
-    trained_model_loc_static = "./trainedQBN/finalModelStatic.pth"
-    input_vec_dim_normal = 52
-    input_vec_dim_static = 28
+    bin_sig_normal_loc = "./trainedQBN/binSigNormal.pth"
+    bin_sig_static_loc = "./trainedQBN/binSigStatic.pth"
+    tanh_normal_loc = "./trainedQBN/tanhNormal.pth"
+    tanh_static_loc = "./trainedQBN/tanhStatic.pth"
+    sig_normal_loc = "./trainedQBN/sigNormal.pth"
+    sig_static_loc = "./trainedQBN/sigStatic.pth"
+    normal_vec_dim = 52
+    static_vec_dim = 28
 
-    envs = [normal_env, static_ball_env]
-    locs = [trained_model_loc_normal, trained_model_loc_static]
-    input_dims = [input_vec_dim_normal, input_vec_dim_static]
+    locs = [bin_sig_normal_loc, bin_sig_static_loc, tanh_normal_loc, tanh_static_loc, sig_normal_loc, sig_static_loc]
+    input_dims = [normal_vec_dim, static_vec_dim, normal_vec_dim, static_vec_dim, normal_vec_dim, static_vec_dim]
+    encoder_activations = [BinarySigmoid(), BinarySigmoid(), nn.Tanh(), nn.Tanh(), nn.Sigmoid(), nn.Sigmoid()]
 
-    for i in range(len(envs)):
-        run_qbn_training(envs[i], input_dims[i], locs[i])
+    training_set_size = 8192
+    testing_set_size = 2048
+    print("Beginning to create the training and testing dataset")
+    normal_train_data = tl.generate_train_data_rand_init(
+        env=normal_env, dataset_size=training_set_size)
+    normal_test_data = tl.generate_train_data_rand_init(
+        env=normal_env, dataset_size=testing_set_size)
+    static_train_data = tl.generate_train_data_rand_init(
+        env=static_ball_env, dataset_size=training_set_size)
+    static_test_data = tl.generate_train_data_rand_init(
+        env=static_ball_env, dataset_size=training_set_size)
+    print("Finished creating the training and testing dataset")
+
+    train_data = [normal_train_data, static_train_data, normal_train_data, static_train_data, normal_train_data, static_train_data]
+    test_data = [normal_test_data, static_test_data, normal_test_data, static_test_data, normal_test_data, static_test_data]
+
+    for i in range(len(input_dims)):
+        run_qbn_training(input_dims[i], encoder_activations[i], train_data[i], test_data[i], locs[i])
+
+    # run_qbn_training(static_ball_env, input_vec_dim_static, trained_model_loc_static)
 
     # # Evaluate the model's performance
     # average_loss = eval_qbn(qbn, obs_testing_data, test_batch_size)

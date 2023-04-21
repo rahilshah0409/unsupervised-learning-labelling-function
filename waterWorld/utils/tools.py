@@ -338,7 +338,7 @@ def compare_changes_in_cluster_ids_vs_events(cluster_labels_arr, event_labels, e
     recall_scores = []
     print("Changes in ground event labels")
     print(changes_in_env_events)
-    for i in range(len(curr_cluster_labels)):   
+    for i in range(len(last_cluster_labels)):   
         print(changes_in_clusters[i])  
         precison, recall = precision_and_recall_calculator(
             changes_in_clusters[i], changes_in_env_events)
@@ -386,9 +386,8 @@ def plot_sim_states_freq(sim_states_arr):
     plt.show()
 
 
-def loadSavedQBN(trained_model_loc):
+def loadSavedQBN(trained_model_loc, input_vec_dim, activation):
     # Load the QBN (trained through the program qbnTrainAndEval.py)
-    input_vec_dim = 52
     quant_vector_dim = 100
     training_batch_size = 32
     learning_rate = 1e-4
@@ -402,6 +401,7 @@ def loadSavedQBN(trained_model_loc):
         learning_rate,
         weight_decay,
         epochs,
+        activation,
         training_set_size,
     )
     qbn.load_state_dict(torch.load(trained_model_loc))

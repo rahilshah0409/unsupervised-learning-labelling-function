@@ -30,6 +30,7 @@ if __name__ == "__main__":
     # num_eps_arr = [100, 200, 300, 400, 500, 600]
     # vary_no_of_eps(env_with_static_balls, num_eps_arr, num_succ_traces, use_velocities)
 
-    num_succ_traces = 50
-    num_eps = 500
-    affect_of_autoencoder(fixed_start_env_with_static_balls, num_succ_traces, num_eps, use_velocities)
+    num_succ_traces = 2
+    num_eps = 10
+    activations = ["binarySigmoid", "tanh", "sigmoid"]
+    affect_of_autoencoder(fixed_start_env_with_static_balls, num_succ_traces, num_eps, use_velocities, activations)
