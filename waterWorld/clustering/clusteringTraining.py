@@ -92,21 +92,18 @@ def get_random_succ_trace(env):
 # Given a list of state sequences, encodes every state in every sequence with the QBN given
 def encode_state_seqs(qbn, state_seqs):
     encoded_seqs = []
-    state_seqs = list(
-        map(
-            lambda seq: list(
-                map(lambda state: torch.tensor(state).float(), seq)),
-            state_seqs,
-        )
-    )
     for state_seq in state_seqs:
-        encoded_state_seq = []
-        for state in state_seq:
-            encoded_state = qbn.encode(state)
-            encoded_state_seq.append(encoded_state.detach().numpy())
+        encoded_state_seq = encode_state_seq(qbn, state_seq)
         encoded_seqs.append(encoded_state_seq)
     return encoded_seqs
 
+def encode_state_seq(qbn, state_seq):
+    encoded_state_seq = []
+    state_seq = list(map(lambda state: torch.tensor(state).float(), state_seq))
+    for state in state_seq:
+        encoded_state = qbn.encode(state)
+        encoded_state_seq.append(encoded_state.detach().numpy())
+    return encoded_state_seq
 
 # Reduce the dimensionality of the data into two dimensions. This will help for visualisation of the KMeans clustering
 def dim_reduction(states, use_tsne):
@@ -145,7 +142,7 @@ def kmeans_clustering(state_seqs, no_of_clusters, plot_title):
     conc_state_seqs = np.concatenate(state_seqs)
     kmeans = KMeans(n_clusters=no_of_clusters)
     print("Fitting the states with the KMeans object")
-    kmeans_obj = kmeans.fit(conc_state_seqs)
+    kmeans_obj = kmeans.fit(np.array(conc_state_seqs, dtype=np.double))
     visualise_training_clustering(kmeans_obj.labels_, conc_state_seqs, no_of_clusters, plot_title)
     return kmeans_obj
 
@@ -191,13 +188,15 @@ def extract_events_from_pairwise_comp(state_seqs):
     return event_labels
 
 
-def train_clustering(state_seqs, no_of_clusters, encode_states=False):
+def train_clustering(state_seqs, no_of_clusters, use_velocities, encode_states=False):
     # cluster_obj_dir = "./trainedClusterObjs"
     # cluster_obj_qbn_loc = cluster_obj_dir + "/kmeans_qbn.pkl"
     # cluster_obj_no_qbn_loc = cluster_obj_dir + "/kmeans_no_qbn.pkl"
 
+    qbn = None
     if encode_states: 
-        qbn = tl.loadSavedQBN("./trainedQBN/finalModel.pth")
+        qbn_filename = "finalModelNormal.pth" if use_velocities else "finalModelStatic.pth"
+        qbn = tl.loadSavedQBN("../../qbnTraining/trainedQBN/" + qbn_filename)
 
         # Encode every state (tensor object) in every sequence with the QBN
         print("Using a loaded QBN to encode states")
@@ -206,7 +205,7 @@ def train_clustering(state_seqs, no_of_clusters, encode_states=False):
     plot_title = "KMeans clustering with encoding" if encode_states else "KMeans clustering without encoding"
     kmeans_obj = kmeans_clustering(state_seqs, no_of_clusters, plot_title)  
     
-    return kmeans_obj
+    return kmeans_obj, qbn
     # print("Save trained KMeans objects in pickle objects")
     # pickle.dump(kmeans_obj, open(cluster_obj_no_qbn_loc, "wb"))
     # pickle.dump(kmeans_obj_qbn, open(cluster_obj_qbn_loc, "wb"))

@@ -207,10 +207,28 @@ def plot_events_pred_events_from_env_dist(events_pred, events_from_env, ep_durat
 
     plt.show()
 
+
+def visualise_cluster_labels_vs_events(cluster_labels, plot_title, event_labels, ep_dur):
+    event_labels = list(map(convert_obs_set_to_str, event_labels))
+
+    fig, (axs1, axs2) = plt.subplots(1, 2)
+    fig.suptitle(plot_title)
+
+    x_axis = range(ep_dur)
+    axs1.plot(x_axis, cluster_labels, 'o')
+    axs1.set(
+        xlabel="State index", ylabel="Cluster labels")
+    axs2.plot(x_axis, event_labels, 'o')
+    axs2.set(
+        xlabel="State index", ylabel="Event labels")
+
+    plt.show()
+
+
 # Visualises how cluster labels have been assigned to states in a trace vs the events that were actually observed in the same trace
 
 
-def visualise_cluster_labels_vs_events(cluster_labels_arr, subplot_titles, event_labels, ep_dur):
+def visualise_cluster_labels_arr_vs_events(cluster_labels_arr, subplot_titles, event_labels, ep_dur):
     event_labels = list(map(convert_obs_set_to_str, event_labels))
 
     fig, axs = plt.subplots(len(cluster_labels_arr), 2)
@@ -242,56 +260,56 @@ def convert_obs_set_to_str(obs):
     else:
         return "None"
 
-# Method that compares changes in cluster labels to changes in events to observe if they occur at the same time
+# Method that compares changes in cluster labels to changes in events to observe if they occur at the same time. OUTDATED
 
 
-def compare_changes_in_events(events_pred, events_from_env, ep_durations):
-    succ_trace_index = 0
-    state_index_in_trace = 0
-    label_index = 0
-    num_succ_traces = len(ep_durations)
-    events_from_env = list(map(convert_obs_set_to_str, events_from_env))
+# def compare_changes_in_events(events_pred, events_from_env, ep_durations):
+#     succ_trace_index = 0
+#     state_index_in_trace = 0
+#     label_index = 0
+#     num_succ_traces = len(ep_durations)
+#     events_from_env = list(map(convert_obs_set_to_str, events_from_env))
 
-    last_event_from_env = events_from_env[label_index]
-    last_cluster_label = events_pred[label_index]
+#     last_event_from_env = events_from_env[label_index]
+#     last_cluster_label = events_pred[label_index]
 
-    precision_scores = []
-    recall_scores = []
-    changes_in_clusters = []
-    changes_in_env_events = []
-    while succ_trace_index < num_succ_traces:
-        curr_cluster_label = events_pred[label_index]
-        curr_event_from_env = events_from_env[label_index]
-        if last_event_from_env != curr_event_from_env:
-            changes_in_env_events.append(
-                (state_index_in_trace, last_event_from_env, curr_event_from_env))
-        if last_cluster_label != curr_cluster_label:
-            changes_in_clusters.append(
-                (state_index_in_trace, last_cluster_label, curr_cluster_label))
-        state_index_in_trace += 1
-        label_index += 1
-        last_event_from_env = curr_event_from_env
-        last_cluster_label = curr_cluster_label
-        if state_index_in_trace >= ep_durations[succ_trace_index]:
-            print("SUCCESSFUL TRACE INDEX: {}".format(succ_trace_index))
-            print("Changes in cluster labels")
-            print(changes_in_clusters)
-            print("Changes in events from the environment")
-            print(changes_in_env_events)
-            precison, recall = precision_and_recall_calculator(
-                changes_in_clusters, changes_in_env_events)
-            precision_scores.append(precison)
-            recall_scores.append(recall)
+#     precision_scores = []
+#     recall_scores = []
+#     changes_in_clusters = []
+#     changes_in_env_events = []
+#     while succ_trace_index < num_succ_traces:
+#         curr_cluster_label = events_pred[label_index]
+#         curr_event_from_env = events_from_env[label_index]
+#         if last_event_from_env != curr_event_from_env:
+#             changes_in_env_events.append(
+#                 (state_index_in_trace, last_event_from_env, curr_event_from_env))
+#         if last_cluster_label != curr_cluster_label:
+#             changes_in_clusters.append(
+#                 (state_index_in_trace, last_cluster_label, curr_cluster_label))
+#         state_index_in_trace += 1
+#         label_index += 1
+#         last_event_from_env = curr_event_from_env
+#         last_cluster_label = curr_cluster_label
+#         if state_index_in_trace >= ep_durations[succ_trace_index]:
+#             print("SUCCESSFUL TRACE INDEX: {}".format(succ_trace_index))
+#             print("Changes in cluster labels")
+#             print(changes_in_clusters)
+#             print("Changes in events from the environment")
+#             print(changes_in_env_events)
+#             precison, recall = precision_and_recall_calculator(
+#                 changes_in_clusters, changes_in_env_events)
+#             precision_scores.append(precison)
+#             recall_scores.append(recall)
 
-            succ_trace_index += 1
-            state_index_in_trace = 0
-            changes_in_clusters = []
-            changes_in_env_events = []
-            if succ_trace_index < num_succ_traces:
-                last_event_from_env = events_from_env[label_index]
-                last_cluster_label = events_pred[label_index]
+#             succ_trace_index += 1
+#             state_index_in_trace = 0
+#             changes_in_clusters = []
+#             changes_in_env_events = []
+#             if succ_trace_index < num_succ_traces:
+#                 last_event_from_env = events_from_env[label_index]
+#                 last_cluster_label = events_pred[label_index]
 
-    return precision_scores, recall_scores
+#     return precision_scores, recall_scores
 
 
 def compare_changes_in_cluster_ids_vs_events(cluster_labels_arr, event_labels, ep_dur):
@@ -308,17 +326,20 @@ def compare_changes_in_cluster_ids_vs_events(cluster_labels_arr, event_labels, e
         if last_event_label != curr_event_label:
             changes_in_env_events.append(
                 (i, last_event_label, curr_event_label))
-        for i in range(len(cluster_labels_arr)):
-            last = last_cluster_labels[i]
-            curr = curr_cluster_labels[i]
+        for j in range(len(cluster_labels_arr)):
+            last = last_cluster_labels[j]
+            curr = curr_cluster_labels[j]
             if last != curr:
-                changes_in_clusters[i].append((i, last, curr))
+                changes_in_clusters[j].append((i, last, curr))
         last_event_label = curr_event_label
         last_cluster_labels = curr_cluster_labels
 
     precision_scores = []
     recall_scores = []
-    for i in range(len(curr_cluster_labels)):     
+    print("Changes in ground event labels")
+    print(changes_in_env_events)
+    for i in range(len(curr_cluster_labels)):   
+        print(changes_in_clusters[i])  
         precison, recall = precision_and_recall_calculator(
             changes_in_clusters[i], changes_in_env_events)
         precision_scores.append(precison)

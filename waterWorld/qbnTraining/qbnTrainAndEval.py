@@ -2,8 +2,10 @@
 
 import math
 from sklearn.model_selection import RandomizedSearchCV
-from waterWorld.qbnTraining.qbn import QuantisedBottleneckNetwork
+from qbn import QuantisedBottleneckNetwork
 import gym
+import sys
+sys.path.insert(1, "/home/rahilshah/Documents/Year4/FYP/AEExperiment/AEExperiment")
 import waterWorld.utils.tools as tl
 import torch.optim as optim
 import torch.nn as nn
@@ -34,24 +36,24 @@ def QBNHyperParameterSearch(model, x, y):
 # Method that carries out the training loop, hyperparameters chosen are in the model object itself
 
 
-def train_loop(model, train_data, test_data, test_batch_size):
+def train_loop(qbn, train_data, test_data, test_batch_size):
     mse_loss = nn.MSELoss().cuda() if torch.cuda.is_available() else nn.MSELoss()
     optimizer = optim.Adam(
-        qbn.parameters(), lr=model.learning_rate, weight_decay=model.weight_decay)
+        qbn.parameters(), lr=qbn.learning_rate, weight_decay=qbn.weight_decay)
     quantised_vectors = []
-    total_train_batches = math.ceil(model.training_set_size / model.batch_size)
+    total_train_batches = math.ceil(qbn.training_set_size / qbn.batch_size)
     epoch_train_losses = []
     epoch_test_losses = []
 
     # QBN training loop
     print("Beginning training of QBN")
-    for epoch in range(model.epochs):
-        model.train()
+    for epoch in range(qbn.epochs):
+        qbn.train()
         total_train_loss = 0
         random.shuffle(train_data)
         for b_i in range(total_train_batches):
             batch_input = train_data[(
-                b_i * model.batch_size): (b_i * model.batch_size) + model.batch_size]
+                b_i * qbn.batch_size): (b_i * qbn.batch_size) + qbn.batch_size]
             batch_input = torch.FloatTensor(np.array(batch_input))
             batch_target = Variable(batch_input)
             batch_input = Variable(batch_input, requires_grad=True)
@@ -59,7 +61,7 @@ def train_loop(model, train_data, test_data, test_batch_size):
             if (torch.cuda.is_available()):
                 batch_input, batch_target = batch_input.cuda(), batch_target.cuda()
 
-            quantised_vector, feature_reconstruction = model.forward(
+            quantised_vector, feature_reconstruction = qbn.forward(
                 batch_input)
             quantised_vectors.append(quantised_vector)
 
@@ -78,7 +80,7 @@ def train_loop(model, train_data, test_data, test_batch_size):
         epoch_train_losses.append(average_loss)
 
         average_test_loss = round(
-            eval_qbn(model, test_data, test_batch_size), 5)
+            eval_qbn(qbn, test_data, test_batch_size), 5)
         epoch_test_losses.append(average_test_loss)
 
         print('Epoch: {}, Training loss: {}, Test loss: {}'.format(
@@ -94,8 +96,8 @@ def train_loop(model, train_data, test_data, test_batch_size):
 
     epoch_loss_dicts = [epoch_loss_dict]
 
-    tl.plot_data(epoch_loss_dicts, "results/")
-    return model
+    tl.plot_data(epoch_loss_dicts, "trainingQBNResults/")
+    return qbn
 
 # Evaluates the model (given as argument) after it has been trained
 
@@ -105,7 +107,7 @@ def eval_qbn(model, test_data, batch_size):
     loss_total = 0
     with torch.no_grad():
         for b_i in range(total_test_batches):
-            batch_input = test_data[(b_i * batch_size)                                    : (b_i * batch_size) + batch_size]
+            batch_input = test_data[(b_i * batch_size) : (b_i * batch_size) + batch_size]
             batch_input = Variable(torch.FloatTensor(np.array(batch_input)))
             batch_target = Variable(torch.FloatTensor(batch_input))
 
@@ -121,14 +123,7 @@ def eval_qbn(model, test_data, batch_size):
     return loss_total / total_test_batches
 
 
-if __name__ == '__main__':
-    # args = tl.get_args() Not using this yet, will do once hyperparameters have been tuned
-    # env = gym.make("gym_subgoal_automata:{}".format(args.env), params={"generation": "random", "environment_seed": args.env_seed})
-    env = gym.make("gym_subgoal_automata:WaterWorldRedGreen-v0",
-                   params={"generation": "random", "environment_seed": 0})
-    trained_model_loc = "./trainedQBN/finalModel.pth"
-    input_vec_dim = 52
-
+def run_qbn_training(env, input_vec_dim, trained_model_loc):
     # Hyperparameters
     quant_vector_dim = 100
     training_batch_size = 32
@@ -147,17 +142,34 @@ if __name__ == '__main__':
         env=env, dataset_size=testing_set_size)
     print("Finished generating training and testing data")
 
-    print(obs_training_data)
-
     # Create and train the QBN
-    # qbn = QuantisedBottleneckNetwork(input_vec_dim, quant_vector_dim, training_batch_size,
-    #                                  learning_rate, weight_decay, epochs, training_set_size)
-    # print("Training the QBN now")
-    # qbn = train_loop(qbn, obs_training_data, obs_testing_data, test_batch_size)
-    # print("Finished training the QBN")
+    qbn = QuantisedBottleneckNetwork(input_vec_dim, quant_vector_dim, training_batch_size,
+                                     learning_rate, weight_decay, epochs, training_set_size)
+    print("Training the QBN now")
+    qbn = train_loop(qbn, obs_training_data, obs_testing_data, test_batch_size)
+    print("Finished training the QBN")
 
-    # # Save the trained model
-    # # torch.save(qbn.state_dict(), trained_model_loc)
+    torch.save(qbn.state_dict(), trained_model_loc)
+
+
+if __name__ == '__main__':
+    # args = tl.get_args() Not using this yet, will do once hyperparameters have been tuned
+    # env = gym.make("gym_subgoal_automata:{}".format(args.env), params={"generation": "random", "environment_seed": args.env_seed})
+    normal_env = gym.make("gym_subgoal_automata:WaterWorldRedGreen-v0",
+                   params={"generation": "random", "environment_seed": 0})
+    static_ball_env = gym.make("gym_subgoal_automata:WaterWorldRedGreen-v0",
+                   params={"generation": "random", "environment_seed": 0, "use_velocities": False})
+    trained_model_loc_normal = "./trainedQBN/finalModelNormal.pth"
+    trained_model_loc_static = "./trainedQBN/finalModelStatic.pth"
+    input_vec_dim_normal = 52
+    input_vec_dim_static = 28
+
+    envs = [normal_env, static_ball_env]
+    locs = [trained_model_loc_normal, trained_model_loc_static]
+    input_dims = [input_vec_dim_normal, input_vec_dim_static]
+
+    for i in range(len(envs)):
+        run_qbn_training(envs[i], input_dims[i], locs[i])
 
     # # Evaluate the model's performance
     # average_loss = eval_qbn(qbn, obs_testing_data, test_batch_size)

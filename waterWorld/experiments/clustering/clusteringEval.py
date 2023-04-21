@@ -2,8 +2,10 @@ import pickle
 import time
 import gym
 import numpy as np
+import sys
+sys.path.append("../../..")
 import waterWorld.utils.tools as tl
-from waterWorld.clustering.clusteringTraining import get_random_succ_trace, get_random_succ_traces, train_clustering
+from waterWorld.clustering.clusteringTraining import extract_shortest_succ_traces, get_random_succ_trace, get_random_succ_traces, train_clustering, encode_state_seq
 
 def user_playing_with_env(env, kmeans_obj, see_replay=True):
     actions, states, _, times = env.play()
@@ -45,53 +47,74 @@ def get_test_trace(env, random_gen=True):
 
 def evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, event_labels, ep_dur):
     precision_scores, recall_scores = tl.compare_changes_in_cluster_ids_vs_events(cluster_labels_arr, event_labels, ep_dur)
+    print(subplot_titles)
     print("Precision scores:")
     print(precision_scores)
     print("Recall scores:")
     print(recall_scores)
 
+    if len(cluster_labels_arr) == 1:
+        tl.visualise_cluster_labels_vs_events(cluster_labels_arr[0], subplot_titles, event_labels, ep_dur)
+    else:
+        tl.visualise_cluster_labels_arr_vs_events(cluster_labels_arr, subplot_titles, event_labels, ep_dur)
+
+
 
 # Try out different forms of clustering. Not implemented yet
 
 # Varying number of clusters that we aim to extract and how we extract event labels given this. Not implemented yet
-
-# See if encoding the states with an autoencoder improves association between cluster labels and event labels
-def affect_of_autoencoder(env, num_succ_traces, num_eps):
+def vary_no_of_clusters(env, num_succ_traces, num_eps, num_clusters_arr):
     ep_dur, states, events = get_test_trace(env, random_gen=True)
     cluster_labels_arr = []
     _, state_seqs, _, _ = get_random_succ_traces(env, num_succ_traces, num_eps)
 
-    kmeans_obj_no_qbn = train_clustering(state_seqs, 4, encode_states=False)
+    for num_clusters in num_clusters_arr:
+        kmeans_obj, _ = train_clustering(state_seqs, num_clusters, encode_states=False)
+        cluster_labels = kmeans_obj.predict(states)
+        cluster_labels_arr.append(cluster_labels)
+
+    subplot_titles = [str(n) for n in num_clusters_arr]
+    evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, events, ep_dur)
+
+# See if encoding the states with an autoencoder improves association between cluster labels and event labels
+def affect_of_autoencoder(env, num_succ_traces, num_eps, use_velocities):
+    ep_dur, states, events = get_test_trace(env, random_gen=True)
+    cluster_labels_arr = []
+    _, state_seqs, _, _ = get_random_succ_traces(env, num_succ_traces, num_eps)
+
+    kmeans_obj_no_qbn, _ = train_clustering(state_seqs, 4, encode_states=False)
     cluster_labels_no_qbn = kmeans_obj_no_qbn.predict(states)
     cluster_labels_arr.append(cluster_labels_no_qbn)
 
-    kmeans_obj_qbn = train_clustering(state_seqs, 4, encode_states=True)
-    cluster_labels_qbn = kmeans_obj_qbn.predict(states)
+    kmeans_obj_qbn, qbn = train_clustering(state_seqs, 4, use_velocities, encode_states=True)
+    encoded_states = encode_state_seq(qbn, states)
+    cluster_labels_qbn = kmeans_obj_qbn.predict(encoded_states)
     cluster_labels_arr.append(cluster_labels_qbn)
 
     subplot_titles = ["Without QBN", "With QBN"]
     evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, events, ep_dur)
 
 # Affect of different number of successful traces
-def vary_no_of_succ_traces(env, num_succ_traces_arr, num_eps):
-    ep_dur, states, events = get_test_trace(env, random_gen=True)
+def vary_no_of_succ_traces(env, num_succ_traces_arr, use_velocities, ep_durs, states, events, actions):
+    ep_dur, test_trace, test_event_labels = get_test_trace(env, random_gen=True)
     cluster_labels_arr = []
     for num_succ_traces in num_succ_traces_arr:
-        _, state_seqs, _, _ = get_random_succ_traces(env, num_succ_traces, num_eps)
-        kmeans_obj = train_clustering(state_seqs, 4)
-        cluster_labels = kmeans_obj.predict(states)
+        _, state_seqs, _, _ = extract_shortest_succ_traces(ep_durs, states, events, actions, num_succ_traces)
+        kmeans_obj, _ = train_clustering(state_seqs, 4, use_velocities, encode_states=False)
+        cluster_labels = kmeans_obj.predict(test_trace)
         cluster_labels_arr.append(cluster_labels)
     
     subplot_titles = [str(n) for n in num_succ_traces_arr]
-    evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, events, ep_dur)
+    evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, test_event_labels, ep_dur)
 
 # Affect of different number of total episodes
-def vary_no_of_eps(env, num_eps_arr, num_succ_traces):
+# Do we want to fix the random traces that are created before the shortest ones are considered?
+def vary_no_of_eps(env, num_eps_arr, num_succ_traces, use_velocities):
     ep_dur, states, events = get_test_trace(env, random_gen=True)
     cluster_labels_arr = []
     for num_eps in num_eps_arr:
         _, state_seqs, _, _ = get_random_succ_traces(env, num_succ_traces, num_eps)
-        kmeans_obj = train_clustering(state_seqs, 4)
+        kmeans_obj, _ = train_clustering(state_seqs, 4, use_velocities, encode_states=False)
         cluster_labels = kmeans_obj.predict(states)
         cluster_labels_arr.append(cluster_labels)
     
