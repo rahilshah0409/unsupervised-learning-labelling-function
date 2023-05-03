@@ -15,7 +15,7 @@ def user_playing_with_env(env, kmeans_obj, see_replay=True):
   
     if see_replay:
         cluster_label_ix = 0
-        time_to_sleep = 0.1
+        time_to_sleep = 0.5
         state = env.reset()
         env.render()
         time.sleep(time_to_sleep)
@@ -121,7 +121,7 @@ def vary_no_of_eps(env, num_eps_arr, num_succ_traces, use_velocities):
     cluster_labels_arr = []
     for num_eps in num_eps_arr:
         _, state_seqs, _, _ = get_random_succ_traces(env, num_succ_traces, num_eps)
-        kmeans_obj, _ = train_clustering(state_seqs, 4, use_velocities, encode_states=False)
+        kmeans_obj, _ = train_clustering(state_seqs, 4, use_velocities, "binarySigmoid", encode_states=False)
         cluster_labels = kmeans_obj.predict(states)
         cluster_labels_arr.append(cluster_labels)
     

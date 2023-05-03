@@ -27,10 +27,14 @@ if __name__ == "__main__":
     # vary_no_of_succ_traces(env_with_static_balls, num_succ_traces_arr, use_velocities, ep_durs, test_trace, test_event_labels, actions)
 
     # num_succ_traces = 50
-    # num_eps_arr = [100, 200, 300, 400, 500, 600]
-    # vary_no_of_eps(env_with_static_balls, num_eps_arr, num_succ_traces, use_velocities)
+    # num_eps_arr = [500]
+    # vary_no_of_eps(fixed_start_env_with_static_balls, num_eps_arr, num_succ_traces, use_velocities)
+    _, state_seqs, _, _ = get_random_succ_traces(fixed_start_env_with_static_balls, num_succ_traces=50, num_episodes=500)
+    encode_states = False
+    kmeans_obj, _ = train_clustering(state_seqs, 4, False, "binarySigmoid", encode_states=encode_states)
+    user_playing_with_env(fixed_start_env_with_static_balls, kmeans_obj)
 
-    num_succ_traces = 2
-    num_eps = 10
-    activations = ["binarySigmoid", "tanh", "sigmoid"]
-    affect_of_autoencoder(fixed_start_env_with_static_balls, num_succ_traces, num_eps, use_velocities, activations)
+    # num_succ_traces = 2
+    # num_eps = 10
+    # activations = ["binarySigmoid", "tanh", "sigmoid"]
+    # affect_of_autoencoder(fixed_start_env_with_static_balls, num_succ_traces, num_eps, use_velocities, activations)
