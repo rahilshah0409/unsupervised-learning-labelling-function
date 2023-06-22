@@ -49,16 +49,17 @@ def get_test_trace(env, random_gen=True):
 
 def evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, event_labels, ep_dur):
     precision_scores, recall_scores = tl.compare_changes_in_cluster_ids_vs_events(cluster_labels_arr, event_labels, ep_dur)
-    print(subplot_titles)
     print("Precision scores:")
     print(precision_scores)
     print("Recall scores:")
     print(recall_scores)
 
-    if len(cluster_labels_arr) == 1:
-        tl.visualise_cluster_labels_vs_events(cluster_labels_arr[0], subplot_titles, event_labels, ep_dur)
-    else:
-        tl.visualise_cluster_labels_arr_vs_events(cluster_labels_arr, subplot_titles, event_labels, ep_dur)
+    # if len(cluster_labels_arr) == 1:
+    #     tl.visualise_cluster_labels_vs_events(cluster_labels_arr[0], subplot_titles, event_labels, ep_dur)
+    # else:
+    #     tl.visualise_cluster_labels_arr_vs_events(cluster_labels_arr, subplot_titles, event_labels, ep_dur)
+
+    return precision_scores[0], recall_scores[0]
 
 
 
@@ -126,4 +127,5 @@ def vary_no_of_eps(env, num_eps_arr, num_succ_traces, use_velocities):
         cluster_labels_arr.append(cluster_labels)
     
     subplot_titles = [str(n) for n in num_eps_arr]
-    evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, events, ep_dur)
+    precision, recall = evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, events, ep_dur)
+    return precision, recall

@@ -66,7 +66,7 @@ def run_agent(env, num_episodes):
         while not (done or terminated):
             action = choose_action()
             actions.append(action)
-            next_state, _, done, observations = env.step(action)
+            next_state, _, done, observations = env.step(action, t)
             state = next_state
             states.append(state)
             t += 1
@@ -168,7 +168,7 @@ def kmeans_clustering(state_seqs, no_of_clusters, plot_title):
     kmeans = KMeans(n_clusters=no_of_clusters)
     print("Fitting the states with the KMeans object")
     kmeans_obj = kmeans.fit(np.array(conc_state_seqs, dtype=np.double))
-    visualise_training_clustering(kmeans_obj.labels_, conc_state_seqs, no_of_clusters, plot_title)
+    # visualise_training_clustering(kmeans_obj.labels_, conc_state_seqs, no_of_clusters, plot_title)
     return kmeans_obj
 
 

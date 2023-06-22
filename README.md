@@ -1,3 +1,2 @@
-# AEExperiment
-Experiments with running an autoencoder through the Water World and Office World environments (custom OpenAI Gym environments) as part of my individual MEng project (Multi-Agent Neuro-Symbolic Reinforcement Learning)
-Fill with more detail later
+# Unsupervised learning of the labelling function
+Experiments with using clustering and autoencoders to learn the labelling function used in RL algorithms that utilise reward machines. This is part of my individual project- Learning Symbolic Observations for Reward Machines in Reinforcement Learning

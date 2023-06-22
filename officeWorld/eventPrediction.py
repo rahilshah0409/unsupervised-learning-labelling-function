@@ -25,7 +25,6 @@ def run_agent(env, num_episodes):
         states = []
         state = env.reset()
         states.append(state)
-        # How would you get the event that is observed in the initial state?
         events_observed = [set()]
         done, t = False, 1
         while not done:
@@ -83,7 +82,7 @@ def kmeans_clustering(state_seqs, no_of_clusters):
                           'Principal component 1', 'Principal component 2'])
     kmeans = KMeans(n_clusters=no_of_clusters)
     labels = kmeans.fit_predict(pca_df)
-    # plotKMeansClustering(pca_df, labels, no_of_clusters)
+    plot_kmeans_clustering(pca_df, labels, no_of_clusters)
     return labels
 
 # Given the cluster that each event is assigned to, extract an event label from them
@@ -190,29 +189,14 @@ if __name__ == '__main__':
     shortest_ep_durations, relevant_state_seqs, relevant_events = get_relevant_succ_traces(
         episode_durations, states_traversed, episode_events, NUM_SUCC_TRACES)
 
-    print(shortest_ep_durations)
-    print(relevant_state_seqs)
-    print(relevant_events)
-
     # Transforming each state from a tensor object to np.ndarray
-    # relevant_state_seqs = list(map(lambda seq: list(map(lambda state: state.detach().numpy(), seq)), relevant_state_seqs))
+    relevant_state_seqs = list(map(lambda seq: list(map(lambda state: state.detach().numpy(), seq)), relevant_state_seqs))
 
-    # # Alternatively, extract labels from latent vectors with k-means clustering
-    # event_labels = extract_events(state_seqs=encoded_seqs, pairwise_comp=False)
+    # Alternatively, extract labels from latent vectors with k-means clustering
+    event_labels = extract_events(state_seqs=relevant_state_seqs, pairwise_comp=False)
 
-    # # Perform evaluation of extracted labels
-    # conc_relevant_events = np.concatenate(relevant_events)
-    # correct_labels = [l1 for l1, l2 in zip(event_labels, conc_relevant_events) if l1 == l2]
-    # accuracy = len(correct_labels) / len(conc_relevant_events)
-    # print("Accuracy of predicted mapping of event labels is {}".format(accuracy))
-
-    # for ((i, x), (j, y)) in sim_states_indices:
-    #     # print("({}, {}), ({}, {})".format(i, x, j, y))
-    #     events_observed_1 = relevant_events[i][x]
-    #     events_observed_2 = relevant_events[j][y]
-    #     if (events_observed_1 != set() and events_observed_2 != set()):
-    #         print("({}, {}), ({}, {})".format(i, x, j, y))
-    #         print("Events observed 1")
-    #         print(events_observed_1)
-    #         print("Events observed 2")
-    #         print(events_observed_2)
+    # Perform evaluation of extracted labels
+    conc_relevant_events = np.concatenate(relevant_events)
+    correct_labels = [l1 for l1, l2 in zip(event_labels, conc_relevant_events) if l1 == l2]
+    accuracy = len(correct_labels) / len(conc_relevant_events)
+    print("Accuracy of predicted mapping of event labels is {}".format(accuracy))

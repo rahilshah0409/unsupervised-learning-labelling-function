@@ -13,8 +13,6 @@ import torch.nn.utils as utils
 from waterWorld.qbnTraining.qbn import QuantisedBottleneckNetwork
 
 # Generates the dataset that is used for training the QBN for the feature vectors by randomly initialising the environment a given number of times
-
-
 def generate_train_data_rand_init(env, dataset_size):
     obs_training_data = []
     for _ in range(dataset_size):
@@ -23,15 +21,10 @@ def generate_train_data_rand_init(env, dataset_size):
     return obs_training_data
 
 # Generate the dataset used to evaluate the QBN
-
-
 def generate_testing_data(env, dataset_size):
-    # This method generates data that can be used for testing the QBN for the observation features
     return generate_train_data_rand_init(env, dataset_size)
 
 # Generates the dataset used for QBN training by adding the states of successful traces when an agent follows a random policy
-
-
 def generate_train_data_succ_traces(env, dataset_size):
     dataset = []
 
@@ -59,8 +52,6 @@ def generate_train_data_succ_traces(env, dataset_size):
     return dataset
 
 # Gets the cmdline arguments
-
-
 def get_args():
     """
     Arguments used to get input from command line.
@@ -103,8 +94,6 @@ def get_args():
     return args
 
 # Plots the information passed in as dict and saves the plot in directory
-
-
 def plot_data(dict, directory):
     for x in dict:
         title = x['title']
@@ -127,8 +116,6 @@ def plot_data(dict, directory):
         plt.clf()
 
 # Trains a given QBN with train_data
-
-
 def trainQBN(qbn, train_data):
     mse_loss = nn.MSELoss().cuda() if torch.cuda.is_available() else nn.MSELoss()
     optimizer = optim.Adam(
@@ -171,8 +158,6 @@ def trainQBN(qbn, train_data):
     return qbn
 
 # Plots graphs to compare how cluster labels are assigned to states in sequences vs the events that are observed in the same sequence
-
-
 def plot_events_pred_events_from_env_dist(events_pred, events_from_env, ep_durations):
     succ_trace_index = 0
     state_index_in_trace = 0
@@ -207,7 +192,7 @@ def plot_events_pred_events_from_env_dist(events_pred, events_from_env, ep_durat
 
     plt.show()
 
-
+# Visualised how cluster labels have been assigned to states in a trace vs the events that were actually observed in the same trace (one configuration)
 def visualise_cluster_labels_vs_events(cluster_labels, plot_title, event_labels, ep_dur):
     event_labels = list(map(convert_obs_set_to_str, event_labels))
 
@@ -225,9 +210,7 @@ def visualise_cluster_labels_vs_events(cluster_labels, plot_title, event_labels,
     plt.show()
 
 
-# Visualises how cluster labels have been assigned to states in a trace vs the events that were actually observed in the same trace
-
-
+# Visualises how cluster labels have been assigned to states in a trace vs the events that were actually observed in the same trace (several configurations)
 def visualise_cluster_labels_arr_vs_events(cluster_labels_arr, subplot_titles, event_labels, ep_dur):
     event_labels = list(map(convert_obs_set_to_str, event_labels))
 
@@ -248,8 +231,6 @@ def visualise_cluster_labels_arr_vs_events(cluster_labels_arr, subplot_titles, e
 
 
 # Helper method that converts the observation set into a string
-
-
 def convert_obs_set_to_str(obs):
     if obs == {'r', 'g'}:
         return "Both red and green"
@@ -260,58 +241,7 @@ def convert_obs_set_to_str(obs):
     else:
         return "None"
 
-# Method that compares changes in cluster labels to changes in events to observe if they occur at the same time. OUTDATED
-
-
-# def compare_changes_in_events(events_pred, events_from_env, ep_durations):
-#     succ_trace_index = 0
-#     state_index_in_trace = 0
-#     label_index = 0
-#     num_succ_traces = len(ep_durations)
-#     events_from_env = list(map(convert_obs_set_to_str, events_from_env))
-
-#     last_event_from_env = events_from_env[label_index]
-#     last_cluster_label = events_pred[label_index]
-
-#     precision_scores = []
-#     recall_scores = []
-#     changes_in_clusters = []
-#     changes_in_env_events = []
-#     while succ_trace_index < num_succ_traces:
-#         curr_cluster_label = events_pred[label_index]
-#         curr_event_from_env = events_from_env[label_index]
-#         if last_event_from_env != curr_event_from_env:
-#             changes_in_env_events.append(
-#                 (state_index_in_trace, last_event_from_env, curr_event_from_env))
-#         if last_cluster_label != curr_cluster_label:
-#             changes_in_clusters.append(
-#                 (state_index_in_trace, last_cluster_label, curr_cluster_label))
-#         state_index_in_trace += 1
-#         label_index += 1
-#         last_event_from_env = curr_event_from_env
-#         last_cluster_label = curr_cluster_label
-#         if state_index_in_trace >= ep_durations[succ_trace_index]:
-#             print("SUCCESSFUL TRACE INDEX: {}".format(succ_trace_index))
-#             print("Changes in cluster labels")
-#             print(changes_in_clusters)
-#             print("Changes in events from the environment")
-#             print(changes_in_env_events)
-#             precison, recall = precision_and_recall_calculator(
-#                 changes_in_clusters, changes_in_env_events)
-#             precision_scores.append(precison)
-#             recall_scores.append(recall)
-
-#             succ_trace_index += 1
-#             state_index_in_trace = 0
-#             changes_in_clusters = []
-#             changes_in_env_events = []
-#             if succ_trace_index < num_succ_traces:
-#                 last_event_from_env = events_from_env[label_index]
-#                 last_cluster_label = events_pred[label_index]
-
-#     return precision_scores, recall_scores
-
-
+# Calculates a numerical comparison between cluster jumps and event labels
 def compare_changes_in_cluster_ids_vs_events(cluster_labels_arr, event_labels, ep_dur):
     event_labels = list(map(convert_obs_set_to_str, event_labels))
     last_cluster_labels = [labels[0] for labels in cluster_labels_arr]
@@ -349,8 +279,6 @@ def compare_changes_in_cluster_ids_vs_events(cluster_labels_arr, event_labels, e
 
 
 # Calculates the precision and recall of the changes in cluster labels and the changes in events taken from the environment
-
-
 def precision_and_recall_calculator(changes_in_clusters, changes_in_env_events):
     cluster_indices = []
     if (changes_in_clusters != []):
@@ -369,8 +297,6 @@ def precision_and_recall_calculator(changes_in_clusters, changes_in_env_events):
     return precision, recall
 
 # Plots how many states are similar to a given state in a sequence
-
-
 def plot_sim_states_freq(sim_states_arr):
     fig, axs = plt.subplots(len(sim_states_arr))
     fig.suptitle("Distribution of similar states for each successful trace")
@@ -385,7 +311,7 @@ def plot_sim_states_freq(sim_states_arr):
 
     plt.show()
 
-
+# Loads an autoencoder (QBN) based on particular hyperparameters when given the location of the saved model
 def loadSavedQBN(trained_model_loc, input_vec_dim, activation):
     # Load the QBN (trained through the program qbnTrainAndEval.py)
     quant_vector_dim = 100
