@@ -3,14 +3,8 @@ import sys
 sys.path.insert(1, "/home/rahilshah/Documents/Year4/FYP/AEExperiment/AEExperiment")
 from waterWorld.qbnTraining.quantisationMethods import BinarySigmoid
 
-
-
 class QuantisedBottleneckNetwork(nn.Module):
 
-    # Understand what the difference is between input size and x_features in the code
-    # Hard coded the values based on my understanding of the code and the input vectors we expect
-    # Using binary quantisation
-    # Introduced hyperparameter of the dimension of the quantised vector, not sure if I want to introduce it here
     def __init__(self, input_vec_dim, quant_vector_dim=6, batch_size=32, learning_rate=0.005, weight_decay=0.01, epochs=100, encoder_activation=BinarySigmoid(), training_set_size=2000):
         super(QuantisedBottleneckNetwork, self).__init__()
         self.input_vec_dim = input_vec_dim

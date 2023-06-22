@@ -28,7 +28,7 @@ def find_qbn_filename(activation, use_velocities):
     qbn_filename = qbn_prefix + qbn_suffix
     return qbn_filename
 
-
+# When given a string, returns the corresponding activation function
 def convert_activation(str):
     if str == "binarySigmoid":
         return BinarySigmoid()
@@ -46,8 +46,7 @@ def choose_action():
     return action
 
 
-# Runs an event with a random policy and keeps track of successful traces and the states and episodes observed in
-# each trace
+# Runs an event with a random policy and keeps track of successful traces and the states and episodes observed in each trace
 def run_agent(env, num_episodes):
     episode_durations = []
     states_traversed = []
@@ -99,7 +98,7 @@ def extract_shortest_succ_traces(
         extracted_ep_durations.append(length)
     return extracted_ep_durations, extracted_state_seqs, extracted_events, extracted_actions
 
-
+# Runs the agent a certain number of times and gets the shortest n traces (second arg)
 def get_random_succ_traces(env, num_succ_traces, num_episodes):
     episode_durations, states_traversed, episode_events, actions_per_episodes = run_agent(
         env, num_episodes)
@@ -108,7 +107,7 @@ def get_random_succ_traces(env, num_succ_traces, num_episodes):
         episode_durations, states_traversed, episode_events, actions_per_episodes, num_succ_traces
     )
 
-
+# Runs the agent and gets the shortest trace
 def get_random_succ_trace(env):
     ep_durs, states, events, actions = get_random_succ_traces(env, 1, 1)
     return ep_durs[0], states[0], events[0], actions[0]
@@ -122,6 +121,7 @@ def encode_state_seqs(qbn, state_seqs):
         encoded_seqs.append(encoded_state_seq)
     return encoded_seqs
 
+# Given a single state sequnce, encodes every state with the QBN given
 def encode_state_seq(qbn, state_seq):
     encoded_state_seq = []
     state_seq = list(map(lambda state: torch.tensor(state).float(), state_seq))
@@ -130,7 +130,7 @@ def encode_state_seq(qbn, state_seq):
         encoded_state_seq.append(encoded_state.detach().numpy())
     return encoded_state_seq
 
-# Reduce the dimensionality of the data into two dimensions. This will help for visualisation of the KMeans clustering
+# Reduce the dimensionality of the data into two dimensions-visualisation of the KMeans clustering
 def dim_reduction(states, use_tsne):
     principal_components = None
     if use_tsne:
@@ -214,9 +214,6 @@ def extract_events_from_pairwise_comp(state_seqs):
 
 
 def train_clustering(state_seqs, no_of_clusters, use_velocities, activation, encode_states=False):
-    # cluster_obj_dir = "./trainedClusterObjs"
-    # cluster_obj_qbn_loc = cluster_obj_dir + "/kmeans_qbn.pkl"
-    # cluster_obj_no_qbn_loc = cluster_obj_dir + "/kmeans_no_qbn.pkl"
 
     qbn = None
     if encode_states: 
@@ -233,9 +230,6 @@ def train_clustering(state_seqs, no_of_clusters, use_velocities, activation, enc
     kmeans_obj = kmeans_clustering(state_seqs, no_of_clusters, plot_title)  
     
     return kmeans_obj, qbn
-    # print("Save trained KMeans objects in pickle objects")
-    # pickle.dump(kmeans_obj, open(cluster_obj_no_qbn_loc, "wb"))
-    # pickle.dump(kmeans_obj_qbn, open(cluster_obj_qbn_loc, "wb"))
 
 
 if __name__ == "__main__":

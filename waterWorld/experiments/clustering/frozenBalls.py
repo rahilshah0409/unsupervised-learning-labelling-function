@@ -21,10 +21,10 @@ if __name__ == "__main__":
         params={"generation": "random", "use_velocities": use_velocities, "environment_seed": 0, "random_restart": False},
     )
 
-    # num_succ_traces_arr = [25, 50, 75, 100, 200, 300, 400]
-    # num_eps = 500
-    # ep_durs, test_trace, test_event_labels, actions = run_agent(env_with_static_balls, num_eps)
-    # vary_no_of_succ_traces(env_with_static_balls, num_succ_traces_arr, use_velocities, ep_durs, test_trace, test_event_labels, actions)
+    num_succ_traces_arr = [25, 50, 75, 100, 200, 300, 400]
+    num_eps = 500
+    ep_durs, test_trace, test_event_labels, actions = run_agent(env_with_static_balls, num_eps)
+    vary_no_of_succ_traces(env_with_static_balls, num_succ_traces_arr, use_velocities, ep_durs, test_trace, test_event_labels, actions)
 
     precision_sum = 0
     recall_sum = 0
@@ -37,14 +37,3 @@ if __name__ == "__main__":
     
     print(precision_sum / 30)
     print(recall_sum / 30)
-    # _, state_seqs, _, _ = get_random_succ_traces(fixed_start_env_with_static_balls, num_succ_traces=50, num_episodes=500)
-    # encode_states = False
-    # kmeans_obj, _ = train_clustering(state_seqs, 4, False, "binarySigmoid", encode_states=encode_states)
-    # # user_playing_with_env(fixed_start_env_with_static_balls, kmeans_obj)
-    # ep_dur, states, events = get_test_trace(env=fixed_start_env_with_static_balls, random_gen=True)
-
-
-    # num_succ_traces = 2
-    # num_eps = 10
-    # activations = ["binarySigmoid", "tanh", "sigmoid"]
-    # affect_of_autoencoder(fixed_start_env_with_static_balls, num_succ_traces, num_eps, use_velocities, activations)

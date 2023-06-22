@@ -17,26 +17,7 @@ import numpy as np
 from torch.autograd import Variable
 from scipy.stats import uniform
 
-# Ignoring this method for now
-
-
-def QBNHyperParameterSearch(model, x, y):
-    potential_params = {
-        "quant_vector_dim": list([4, 8, 16, 32, 64, 128]),
-        "batch_size": list([4, 8, 16, 32, 64, 128]),
-        "learning_rate": uniform(0.001, 0.1),
-        "weight_decay": uniform(0, 0.2),
-        "epochs": list(range(10, 100, 10)),
-        "training_set_size": list([500, 1000, 2000, 3000])
-    }
-    search = RandomizedSearchCV(
-        estimator=model, param_distributions=potential_params, n_iter=25, cv=5, scoring=None)
-    search.fit(x, y)
-    return search.best_params_, search.best_estimator_
-
-# Method that carries out the training loop, hyperparameters chosen are in the model object itself
-
-
+# Method that carries out the training loop of the QBN, hyperparameters chosen are in the model object itself
 def train_loop(qbn, train_data, test_data, test_batch_size):
     mse_loss = nn.MSELoss().cuda() if torch.cuda.is_available() else nn.MSELoss()
     optimizer = optim.Adam(
@@ -71,11 +52,9 @@ def train_loop(qbn, train_data, test_data, test_batch_size):
             total_train_loss += loss.item()
             loss.backward()
             utils.clip_grad_norm_(qbn.parameters(), 5)
-            # Loss value rounded to 2dp before adding to record of loss values
-            # loss_values.append(round(loss.item(), 2))
             optimizer.step()
 
-            # print("Epoch: {}, Batch: {}, Loss: {}".format(epoch, b_i, loss.item()))
+            print("Epoch: {}, Batch: {}, Loss: {}".format(epoch, b_i, loss.item()))
 
         average_loss = round(total_train_loss / total_train_batches, 5)
         epoch_train_losses.append(average_loss)
@@ -86,7 +65,6 @@ def train_loop(qbn, train_data, test_data, test_batch_size):
 
         print('Epoch: {}, Training loss: {}, Test loss: {}'.format(
             epoch, average_loss, average_test_loss))
-        # print('Epoch: %d, Average Loss: %f' % (epoch, total_loss / total_batches))
 
     epoch_loss_dict = {'title': 'Loss vs Epoch',
                        'train_data': epoch_train_losses,
@@ -101,8 +79,6 @@ def train_loop(qbn, train_data, test_data, test_batch_size):
     return qbn
 
 # Evaluates the model (given as argument) after it has been trained
-
-
 def eval_qbn(model, test_data, batch_size):
     total_test_batches = math.ceil(len(test_data) / batch_size)
     loss_total = 0
@@ -146,8 +122,6 @@ def run_qbn_training(input_vec_dim, encoder_activation, train_data, test_data, t
 
 
 if __name__ == '__main__':
-    # args = tl.get_args() Not using this yet, will do once hyperparameters have been tuned
-    # env = gym.make("gym_subgoal_automata:{}".format(args.env), params={"generation": "random", "environment_seed": args.env_seed})
     normal_env = gym.make("gym_subgoal_automata:WaterWorldRedGreen-v0",
                    params={"generation": "random", "environment_seed": 0})
     static_ball_env = gym.make("gym_subgoal_automata:WaterWorldRedGreen-v0",
@@ -183,9 +157,3 @@ if __name__ == '__main__':
 
     for i in range(len(input_dims)):
         run_qbn_training(input_dims[i], encoder_activations[i], train_data[i], test_data[i], locs[i])
-
-    # run_qbn_training(static_ball_env, input_vec_dim_static, trained_model_loc_static)
-
-    # # Evaluate the model's performance
-    # average_loss = eval_qbn(qbn, obs_testing_data, test_batch_size)
-    # print("Average Loss: {}".format(average_loss))

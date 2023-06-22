@@ -11,7 +11,6 @@ def user_playing_with_env(env, kmeans_obj, see_replay=True):
     actions, states, _, times = env.play()
 
     cluster_labels = kmeans_obj.predict(states)
-    print(states[-4])
   
     if see_replay:
         cluster_label_ix = 0
@@ -25,15 +24,12 @@ def user_playing_with_env(env, kmeans_obj, see_replay=True):
             t_delta = times[j]
             state, _, _, _ = env.step(action, t_delta)
             label = cluster_labels[cluster_label_ix]
-            if prev_label != label:
-                print("HAVE WE OVERLAPPED WITH ONE OF THE BALLS?")
-            print("Label: {}".format(label))
             env.render()
             prev_label = label
             time.sleep(time_to_sleep)
             cluster_label_ix += 1
             
-
+# Gets the state trace used for evaluation of the clustering approach for learning the labelling function
 def get_test_trace(env, random_gen=True):
     ep_dur = 0
     states = []
@@ -46,7 +42,7 @@ def get_test_trace(env, random_gen=True):
 
     return ep_dur, states, events
 
-
+# Computes numerical comparison between cluster jumps and events observed at each state and prints out these metrics before returning them
 def evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, event_labels, ep_dur):
     precision_scores, recall_scores = tl.compare_changes_in_cluster_ids_vs_events(cluster_labels_arr, event_labels, ep_dur)
     print("Precision scores:")
@@ -54,16 +50,8 @@ def evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, event_
     print("Recall scores:")
     print(recall_scores)
 
-    # if len(cluster_labels_arr) == 1:
-    #     tl.visualise_cluster_labels_vs_events(cluster_labels_arr[0], subplot_titles, event_labels, ep_dur)
-    # else:
-    #     tl.visualise_cluster_labels_arr_vs_events(cluster_labels_arr, subplot_titles, event_labels, ep_dur)
-
     return precision_scores[0], recall_scores[0]
 
-
-
-# Try out different forms of clustering. Not implemented yet
 
 # Varying number of clusters that we aim to extract and how we extract event labels given this. Not implemented yet
 def vary_no_of_clusters(env, num_succ_traces, num_eps, num_clusters_arr):
@@ -116,7 +104,6 @@ def vary_no_of_succ_traces(env, num_succ_traces_arr, use_velocities, ep_durs, st
     evaluate_cluster_label_prediction(cluster_labels_arr, subplot_titles, test_event_labels, ep_dur)
 
 # Affect of different number of total episodes
-# Do we want to fix the random traces that are created before the shortest ones are considered?
 def vary_no_of_eps(env, num_eps_arr, num_succ_traces, use_velocities):
     ep_dur, states, events = get_test_trace(env, random_gen=True)
     cluster_labels_arr = []
